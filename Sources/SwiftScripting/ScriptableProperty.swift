@@ -22,7 +22,7 @@ public struct ScriptableProperty<Value: ScriptableValue>: Sendable where Value: 
     public let scriptingName: String
 
     /// The four-character code for this property.
-    public let code: String
+    public let code: FourCharCode
 
     /// Whether this property is read-only to scripting.
     public let isReadOnly: Bool
@@ -50,7 +50,7 @@ public struct ScriptableProperty<Value: ScriptableValue>: Sendable where Value: 
         }
     }
 
-    public init(wrappedValue: Value, _ scriptingName: String, code: String, readOnly: Bool = false) {
+    public init(wrappedValue: Value, _ scriptingName: String, code: FourCharCode, readOnly: Bool = false) {
         self._value = wrappedValue
         self.scriptingName = scriptingName
         self.code = code

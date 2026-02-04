@@ -31,4 +31,4 @@ public protocol _ScriptableObservable: AnyObject, Observable {
 /// or the generated extension will add conformance.
 @attached(member, names: named(scriptableID), named(scriptableName), named(scriptingClassDescription), named(scriptableValue), named(setScriptableValue), named(scriptableElements), named(insertScriptableElement), named(removeScriptableElement), named(_$observationRegistrar))
 @attached(extension, conformances: Observable, _ScriptableObservable)
-public macro Scriptable(_ name: String? = nil, code: String? = nil) = #externalMacro(module: "SwiftScriptingMacros", type: "ScriptableMacro")
+public macro Scriptable(_ name: String? = nil, code: FourCharCode? = nil) = #externalMacro(module: "SwiftScriptingMacros", type: "ScriptableMacro")

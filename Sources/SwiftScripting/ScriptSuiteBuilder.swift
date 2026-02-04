@@ -43,11 +43,11 @@ public struct ScriptSuite: Sendable {
 
     public init(
         _ name: String,
-        code: String,
+        code: FourCharCode,
         @ScriptSuiteBuilder classes: () -> [any ScriptableObject.Type]
     ) {
         self.name = name
-        self.code = FourCharCode(code)
+        self.code = code
         self.classes = classes()
     }
 }

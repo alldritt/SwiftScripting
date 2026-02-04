@@ -29,13 +29,13 @@ public struct FourCharCode: Hashable, Sendable, CustomStringConvertible {
 
     /// The four-character string representation.
     public var stringValue: String {
-        let chars = [
+        let bytes: [UInt8] = [
             UInt8((rawValue >> 24) & 0xFF),
             UInt8((rawValue >> 16) & 0xFF),
             UInt8((rawValue >> 8) & 0xFF),
             UInt8(rawValue & 0xFF),
         ]
-        return String(bytes: chars, encoding: .ascii) ?? "????"
+        return String(decoding: bytes, as: UTF8.self)
     }
 
     public var description: String {
