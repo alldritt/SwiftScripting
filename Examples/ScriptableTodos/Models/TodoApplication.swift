@@ -1,27 +1,38 @@
 import Foundation
 import SwiftScripting
 
-typealias FCC = SwiftScripting.FourCharCode
-
 /// Custom application root for the To-Do app.
 ///
 /// Demonstrates a non-document-based app with a custom element type
-/// (todo lists instead of documents).
+/// (todo lists instead of documents). Uses closure-based property and
+/// element descriptions so the default ScriptableObject dispatch handles
+/// get/set/insert/remove automatically.
 @Observable
 @MainActor
 final class TodoApplication: ScriptableObject, @unchecked Sendable {
-    static let todoListCode = TodoList.scriptingClassDescription.code
-
     static var scriptingClassDescription: ScriptingClassDescription {
         ScriptingClassDescription(
             name: "application",
             code: .classApplication,
             properties: [
-                ScriptingPropertyDescription(name: "name", code: .propertyName, type: .text, isReadOnly: true),
-                ScriptingPropertyDescription(name: "selection", code: .propertySelection, type: .objectSpecifier(TodoList.self)),
+                ScriptingPropertyDescription(
+                    name: "name", code: .propertyName, type: .text, isReadOnly: true,
+                    getter: { ($0 as! TodoApplication).scriptableName },
+                    setter: nil
+                ),
+                ScriptingPropertyDescription(
+                    name: "selection", code: .propertySelection, type: .objectSpecifier(TodoList.self),
+                    getter: { ($0 as! TodoApplication).selectedList ?? ScriptingMissingValue() as any ScriptableValue },
+                    setter: { ($0 as! TodoApplication).selectedList = $1 as? TodoList }
+                ),
             ],
             elements: [
-                ScriptingElementDescription(type: TodoList.self),
+                ScriptingElementDescription(
+                    type: TodoList.self,
+                    getter: { ($0 as! TodoApplication).todoLists.map { $0 as any ScriptableObject } },
+                    inserter: { guard let list = $1 as? TodoList else { throw ScriptingError.typeMismatch(expected: TodoList.self) }; ($0 as! TodoApplication).todoLists.insert(list, at: $2) },
+                    remover: { ($0 as! TodoApplication).todoLists.remove(at: $1) }
+                ),
             ]
         )
     }
@@ -31,42 +42,4 @@ final class TodoApplication: ScriptableObject, @unchecked Sendable {
 
     var todoLists: [TodoList] = []
     var selectedList: TodoList?
-
-    func scriptableValue(forProperty code: FCC) -> any ScriptableValue {
-        switch code {
-        case .propertyName: return scriptableName
-        case .propertySelection: return selectedList ?? ScriptingMissingValue() as any ScriptableValue
-        default: return "" as any ScriptableValue
-        }
-    }
-
-    func setScriptableValue(_ value: any ScriptableValue, forProperty code: FCC) throws {
-        switch code {
-        case .propertySelection:
-            selectedList = value as? TodoList
-        default:
-            throw ScriptingError.readOnlyProperty(code)
-        }
-    }
-
-    func scriptableElements(forCode code: FCC) -> [any ScriptableObject] {
-        switch code {
-        case Self.todoListCode: return todoLists
-        default: return []
-        }
-    }
-
-    func insertScriptableElement(_ object: any ScriptableObject, forCode code: FCC, at index: Int) throws {
-        guard code == Self.todoListCode, let list = object as? TodoList else {
-            throw ScriptingError.typeMismatch(expected: TodoList.self)
-        }
-        todoLists.insert(list, at: index)
-    }
-
-    func removeScriptableElement(at index: Int, forCode code: FCC) throws {
-        guard code == Self.todoListCode else {
-            throw ScriptingError.elementNotFound(code)
-        }
-        todoLists.remove(at: index)
-    }
 }
