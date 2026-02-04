@@ -25,39 +25,40 @@ struct ScriptableMacroTests {
                 @ScriptableProperty("name", code: "pnam")
                 var name: String = "Untitled"
 
-                public var scriptableID: String { ObjectIdentifier(self).debugDescription }
+                public nonisolated let scriptableID: String = SwiftScripting._makeScriptableID()
 
                 public var scriptableName: String? { self.name }
 
                 public static var scriptingClassDescription: ScriptingClassDescription {
                     ScriptingClassDescription(
                         name: "MyDoc",
-                        code: FourCharCode("MyDo"),
+                        code: SwiftScripting.FourCharCode("MyDo"),
                         properties: [
-                            ScriptingPropertyDescription(name: "name", code: FourCharCode("pnam"), type: String.scriptingType, isReadOnly: false)
+                            ScriptingPropertyDescription(name: "id", code: .propertyID, type: String.scriptingType, isReadOnly: true),
+                            ScriptingPropertyDescription(name: "name", code: SwiftScripting.FourCharCode("pnam"), type: String.scriptingType, isReadOnly: false)
                         ],
                         elements: [
                             \n                ]
                     )
                 }
 
-                public func scriptableValue(forProperty code: FourCharCode) -> any ScriptableValue {
+                public func scriptableValue(forProperty code: SwiftScripting.FourCharCode) -> any ScriptableValue {
                     switch code {
-                    case FourCharCode("pnam"): return self.name as any ScriptableValue
+                    case SwiftScripting.FourCharCode("pnam"): return self.name as any ScriptableValue
                     default:
                         return "" as any ScriptableValue
                     }
                 }
 
-                public func setScriptableValue(_ value: any ScriptableValue, forProperty code: FourCharCode) throws {
+                public func setScriptableValue(_ value: any ScriptableValue, forProperty code: SwiftScripting.FourCharCode) throws {
                     switch code {
-                    case FourCharCode("pnam"): self.name = value as! String
+                    case SwiftScripting.FourCharCode("pnam"): self.name = value as! String
                     default:
                         throw ScriptingError.propertyNotFound(code)
                     }
                 }
 
-                public func scriptableElements(forCode code: FourCharCode) -> [any ScriptableObject] {
+                public func scriptableElements(forCode code: SwiftScripting.FourCharCode) -> [any ScriptableObject] {
                     switch code {
                     break
                     default:
@@ -65,7 +66,7 @@ struct ScriptableMacroTests {
                     }
                 }
 
-                public func insertScriptableElement(_ object: any ScriptableObject, forCode code: FourCharCode, at index: Int) throws {
+                public func insertScriptableElement(_ object: any ScriptableObject, forCode code: SwiftScripting.FourCharCode, at index: Int) throws {
                     switch code {
                     break
                     default:
@@ -73,7 +74,7 @@ struct ScriptableMacroTests {
                     }
                 }
 
-                public func removeScriptableElement(at index: Int, forCode code: FourCharCode) throws {
+                public func removeScriptableElement(at index: Int, forCode code: SwiftScripting.FourCharCode) throws {
                     switch code {
                     break
                     default:
@@ -81,10 +82,10 @@ struct ScriptableMacroTests {
                     }
                 }
 
-                @ObservationIgnored private let _$observationRegistrar = Observation.ObservationRegistrar()
+                @ObservationIgnored public let _$observationRegistrar = Observation.ObservationRegistrar()
             }
 
-            extension MyDoc: ScriptableObject, Observable {
+            extension MyDoc: Observable, SwiftScripting._ScriptableObservable {
             }
             """,
             macros: macros

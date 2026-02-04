@@ -16,6 +16,29 @@ public final class CoreSuiteHandlers: Sendable {
         self.registry = registry
     }
 
+    // MARK: - Property Packing
+
+    /// Pack a single property value from an object.
+    /// `pcls` is always available. `pID` is only returned if the class
+    /// advertises it in its class description (i.e. the model opts into
+    /// Identifiable). Everything else delegates to the object.
+    private func packProperty(
+        _ propertyCode: ScriptFourCharCode,
+        of target: any ScriptableObject
+    ) -> NSAppleEventDescriptor {
+        let classDesc = type(of: target).scriptingClassDescription
+
+        switch propertyCode {
+        case .propertyClass:
+            return NSAppleEventDescriptor(typeCode: classDesc.code.rawValue)
+        case .propertyID where classDesc.property(forCode: .propertyID) != nil:
+            return DescriptorPacking.pack(target.scriptableID)
+        default:
+            let value = target.scriptableValue(forProperty: propertyCode)
+            return DescriptorPacking.pack(value)
+        }
+    }
+
     // MARK: - Get (getd)
 
     public func handleGet(
@@ -26,21 +49,21 @@ public final class CoreSuiteHandlers: Sendable {
         switch specifier {
         case .property(let propertyCode, let container):
             let containers = try resolver.resolve(container ?? .application)
-            guard let target = containers.first else {
+            guard !containers.isEmpty else {
                 throw AppleEventError.noSuchObject("No container for property \(propertyCode)")
             }
 
-            // Handle standard built-in properties before delegating to the object
-            switch propertyCode {
-            case .propertyID:
-                return DescriptorPacking.pack(target.scriptableID)
-            case .propertyClass:
-                let classCode = type(of: target).scriptingClassDescription.code
-                return NSAppleEventDescriptor(typeCode: classCode.rawValue)
-            default:
-                let value = target.scriptableValue(forProperty: propertyCode)
-                return DescriptorPacking.pack(value)
+            // When the container resolves to multiple objects (e.g. "name of every todo item"),
+            // return a list of property values from each object.
+            if containers.count > 1 {
+                let list = NSAppleEventDescriptor.list()
+                for (i, target) in containers.enumerated() {
+                    list.insert(packProperty(propertyCode, of: target), at: i + 1)
+                }
+                return list
             }
+
+            return packProperty(propertyCode, of: containers[0])
 
         default:
             let objects = try resolver.resolve(specifier)
@@ -95,9 +118,10 @@ public final class CoreSuiteHandlers: Sendable {
                     throw AppleEventError.noSuchObject("Could not resolve object for property \(propertyCode)")
                 }
                 try target.setScriptableValue(resolvedObj as any ScriptableValue, forProperty: propertyCode)
-            } else if data.descriptorType == typeNull || data.descriptorType == UInt32(cMissingValue) {
+            } else if data.descriptorType == typeNull ||
+                      (data.descriptorType == typeType && data.typeCodeValue == UInt32(cMissingValue)) {
                 // Handle missing value / null — clear the property
-                try target.setScriptableValue("" as any ScriptableValue, forProperty: propertyCode)
+                try target.setScriptableValue(ScriptingMissingValue() as any ScriptableValue, forProperty: propertyCode)
             } else {
                 guard let value = DescriptorPacking.unpack(data, as: propDesc.type) else {
                     throw AppleEventError.wrongDataType("Cannot convert to \(propDesc.type)")
@@ -150,14 +174,42 @@ public final class CoreSuiteHandlers: Sendable {
         let index: Int?
 
         if let location = insertionLocation {
-            let specifier = try ObjectSpecifierParsing.parse(location)
-            let resolved = try resolver.resolve(specifier)
-            if let first = resolved.first {
-                container = first
+            if location.descriptorType == typeInsertionLoc {
+                // Insertion location record: extract container object and position
+                let objectDesc = location.forKeyword(AEKeyword(keyAEObject)) ?? NSAppleEventDescriptor.null()
+                let positionDesc = location.forKeyword(AEKeyword(keyAEPosition))
+                let position = positionDesc?.enumCodeValue ?? OSType(kAEEnd)
+
+                let specifier = try ObjectSpecifierParsing.parse(objectDesc)
+                let resolved = try resolver.resolve(specifier)
+                guard let target = resolved.first else {
+                    throw AppleEventError.noSuchObject("No container for insertion")
+                }
+                container = target
+
+                let elementCount = container.scriptableElements(forCode: classCode).count
+                switch position {
+                case OSType(kAEBeginning):
+                    index = 0
+                case OSType(kAEEnd):
+                    index = elementCount
+                case OSType(kAEBefore):
+                    index = 0
+                case OSType(kAEAfter):
+                    index = elementCount
+                default:
+                    index = elementCount
+                }
             } else {
-                container = try resolver.resolve(.application).first!
+                let specifier = try ObjectSpecifierParsing.parse(location)
+                let resolved = try resolver.resolve(specifier)
+                if let first = resolved.first {
+                    container = first
+                } else {
+                    container = try resolver.resolve(.application).first!
+                }
+                index = nil
             }
-            index = nil
         } else {
             guard let app = registry.application else {
                 throw AppleEventError.noSuchObject("No application")

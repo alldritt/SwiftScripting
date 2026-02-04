@@ -71,7 +71,7 @@ let package = Package(
             name: "ScriptableTodos",
             dependencies: ["SwiftScripting", "SwiftScriptingAppleEvents"],
             path: "Examples/ScriptableTodos",
-            exclude: ["project.yml", "ObjC", "ScriptableTodos.sdef", "Info.plist"],
+            exclude: ["project.yml", "ObjC", "ScriptableTodos.sdef", "Info.plist", "TestScriptableTodos.applescript"],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .executableTarget(

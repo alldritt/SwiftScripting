@@ -37,7 +37,7 @@ final class TodoApplication: ScriptableObject, @unchecked Sendable {
     func scriptableValue(forProperty code: FCC) -> any ScriptableValue {
         switch code {
         case .propertyName: return "ScriptableTodos"
-        case Self.selectionCode: return selectedList as (any ScriptableValue)? ?? "" as any ScriptableValue
+        case Self.selectionCode: return selectedList ?? ScriptingMissingValue() as any ScriptableValue
         default: return "" as any ScriptableValue
         }
     }
@@ -60,7 +60,7 @@ final class TodoApplication: ScriptableObject, @unchecked Sendable {
 
     func insertScriptableElement(_ object: any ScriptableObject, forCode code: FCC, at index: Int) throws {
         guard code == Self.todoListCode, let list = object as? TodoList else {
-            throw ScriptingError.typeMismatch(expected: "TodoList")
+            throw ScriptingError.typeMismatch(expected: "todo list")
         }
         todoLists.insert(list, at: index)
     }

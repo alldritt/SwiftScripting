@@ -46,7 +46,7 @@ public final class ScriptableObjectRegistry: Sendable {
     /// Create a new instance of the given class code using the registered factory.
     public func createObject(classCode: FourCharCode) throws -> any ScriptableObject {
         guard let factory = factories[classCode] else {
-            throw ScriptingError.objectNotFound("No factory for class \(classCode)")
+            throw ScriptingError.objectNotFound("No factory for class \(classDescriptions[classCode]?.name ?? classCode.stringValue)")
         }
         return factory()
     }

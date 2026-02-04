@@ -51,7 +51,7 @@ public struct ScriptableMacro: MemberMacro, ExtensionMacro {
 
         // Generate scriptableID (must be nonisolated to satisfy protocol requirement)
         members.append("""
-        public nonisolated var scriptableID: String { ObjectIdentifier(self).debugDescription }
+        public nonisolated let scriptableID: String = SwiftScripting._makeScriptableID()
         """)
 
         // Generate scriptableName (uses first string property named "name" if available)
@@ -67,9 +67,14 @@ public struct ScriptableMacro: MemberMacro, ExtensionMacro {
         }
 
         // Generate scriptingClassDescription
-        let propDescriptions = propertyEntries.map { entry in
+        // Always include pID as a read-only property (ScriptableObject requires Identifiable)
+        var allPropDescriptions = [
+            "ScriptingPropertyDescription(name: \"id\", code: .propertyID, type: String.scriptingType, isReadOnly: true)"
+        ]
+        allPropDescriptions += propertyEntries.map { entry in
             "ScriptingPropertyDescription(name: \"\(entry.scriptingName)\", code: \(fcc)(\"\(entry.code)\"), type: \(entry.typeName).scriptingType, isReadOnly: \(entry.isReadOnly))"
-        }.joined(separator: ",\n                ")
+        }
+        let propDescriptions = allPropDescriptions.joined(separator: ",\n                ")
 
         let elemDescriptions = elementEntries.map { entry in
             "ScriptingElementDescription(name: \"\(entry.scriptingName)\", code: \(fcc)(\"\(entry.code)\"), objectType: \"\(entry.elementTypeName)\")"
@@ -165,7 +170,7 @@ public struct ScriptableMacro: MemberMacro, ExtensionMacro {
             """
             case \(fcc)("\(entry.code)"):
                         guard let typed = object as? \(entry.elementTypeName) else {
-                            throw ScriptingError.typeMismatch(expected: "\(entry.elementTypeName)")
+                            throw ScriptingError.typeMismatch(expected: "\(entry.scriptingName)")
                         }
                         self.\(entry.variableName).insert(typed, at: index)
             """

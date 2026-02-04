@@ -28,6 +28,8 @@ public enum DescriptorPacking {
             return packData(data)
         case let url as URL:
             return packURL(url)
+        case is ScriptingMissingValue:
+            return NSAppleEventDescriptor(typeCode: UInt32(cMissingValue))
         default:
             // Check for ScriptableObject — return as object specifier reference
             if let obj = value as? any ScriptableObject {

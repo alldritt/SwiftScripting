@@ -50,3 +50,22 @@ extension Array: ScriptableValue where Element: ScriptableValue {
 extension Optional: ScriptableValue where Wrapped: ScriptableValue {
     public static var scriptingType: ScriptingType { .optional(Wrapped.scriptingType) }
 }
+
+// MARK: - Unique ID Generation
+
+/// Generates a unique identifier string for scriptable objects.
+/// Used by the `@Scriptable` macro to initialize `scriptableID`.
+public nonisolated func _makeScriptableID() -> String {
+    UUID().uuidString
+}
+
+// MARK: - Missing Value
+
+/// Sentinel representing AppleScript's `missing value`.
+///
+/// Return this from `scriptableValue(forProperty:)` when a property has no value
+/// (e.g. an optional that is nil). It packs as `typeType(cMissingValue)`.
+public struct ScriptingMissingValue: ScriptableValue, Sendable {
+    public static var scriptingType: ScriptingType { .any }
+    public init() {}
+}

@@ -94,6 +94,13 @@ public struct ObjectResolver: Sendable {
         return try resolve(container)
     }
 
+    // MARK: - Helpers
+
+    /// Returns the SDEF element name for a class code (e.g. "todo item"), falling back to the four-char code.
+    private func elementName(for code: FourCharCode) -> String {
+        registry.classDescription(for: code)?.name ?? code.stringValue
+    }
+
     // MARK: - Index Resolution
 
     private func resolveByIndex(
@@ -128,7 +135,7 @@ public struct ObjectResolver: Sendable {
         let elements = container.scriptableElements(forCode: classCode)
         let matches = elements.filter { $0.scriptableName == name }
         if matches.isEmpty {
-            throw ScriptingError.objectNotFound("No \(classCode) named \"\(name)\"")
+            throw ScriptingError.objectNotFound("No \(elementName(for: classCode)) named \"\(name)\"")
         }
         return matches
     }
@@ -143,7 +150,7 @@ public struct ObjectResolver: Sendable {
         let elements = container.scriptableElements(forCode: classCode)
         let matches = elements.filter { $0.scriptableID == id }
         if matches.isEmpty {
-            throw ScriptingError.objectNotFound("No \(classCode) with id \"\(id)\"")
+            throw ScriptingError.objectNotFound("No \(elementName(for: classCode)) with id \"\(id)\"")
         }
         return matches
     }
