@@ -15,6 +15,11 @@ public indirect enum ScriptingType: Hashable, Sendable {
     case color
     case any
 
+    /// Type-safe factory that derives the class name from a `ScriptableObject` type.
+    @MainActor public static func objectSpecifier<T: ScriptableObject>(_ type: T.Type) -> ScriptingType {
+        .objectSpecifier(T.scriptingClassDescription.name)
+    }
+
     /// The four-char Apple Event type code for this scripting type.
     public var aeTypeCode: FourCharCode {
         switch self {
@@ -66,13 +71,17 @@ public struct ScriptingElementDescription: Hashable, Sendable {
     /// The four-char code identifying this element type (e.g., `"cpar"`).
     public let code: FourCharCode
 
-    /// The Swift type name of the contained objects.
-    public let objectType: String
+    /// Derive name and code from the element type's class description.
+    @MainActor public init<T: ScriptableObject>(type: T.Type) {
+        let desc = T.scriptingClassDescription
+        self.name = desc.name
+        self.code = desc.code
+    }
 
-    public init(name: String, code: FourCharCode, objectType: String) {
+    /// Manual initializer for non-macro classes (e.g., custom application roots).
+    public init(name: String, code: FourCharCode) {
         self.name = name
         self.code = code
-        self.objectType = objectType
     }
 }
 

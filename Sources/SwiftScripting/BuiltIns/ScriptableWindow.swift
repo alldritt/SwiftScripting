@@ -66,16 +66,16 @@ public final class ScriptableWindow: ScriptableObject, @unchecked Sendable {
     public func setScriptableValue(_ value: any ScriptableValue, forProperty code: FourCharCode) throws {
         switch code {
         case FourCharCode("pidx"):
-            guard let v = value as? Int else { throw ScriptingError.typeMismatch(expected: "Int") }
+            guard let v = value as? Int else { throw ScriptingError.typeMismatch(expected: Int.self) }
             self.index = v
         case FourCharCode("pvis"):
-            guard let v = value as? Bool else { throw ScriptingError.typeMismatch(expected: "Bool") }
+            guard let v = value as? Bool else { throw ScriptingError.typeMismatch(expected: Bool.self) }
             self.visible = v
         case FourCharCode("pmnd"):
-            guard let v = value as? Bool else { throw ScriptingError.typeMismatch(expected: "Bool") }
+            guard let v = value as? Bool else { throw ScriptingError.typeMismatch(expected: Bool.self) }
             self.miniaturized = v
         case FourCharCode("pzum"):
-            guard let v = value as? Bool else { throw ScriptingError.typeMismatch(expected: "Bool") }
+            guard let v = value as? Bool else { throw ScriptingError.typeMismatch(expected: Bool.self) }
             self.zoomed = v
         default:
             throw ScriptingError.propertyNotFound(code)

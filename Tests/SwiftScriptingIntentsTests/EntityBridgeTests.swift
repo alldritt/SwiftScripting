@@ -79,7 +79,7 @@ final class MockDocForIntents: ScriptableObject, @unchecked Sendable {
 final class MockAppForIntents: ScriptableObject, @unchecked Sendable {
     static var scriptingClassDescription: ScriptingClassDescription {
         ScriptingClassDescription(name: "application", code: .classApplication, elements: [
-            ScriptingElementDescription(name: "document", code: .classDocument, objectType: "MockDocForIntents"),
+            ScriptingElementDescription(name: "document", code: .classDocument),
         ])
     }
 

@@ -16,7 +16,7 @@ final class MockDocument: ScriptableObject, @unchecked Sendable {
                 ScriptingPropertyDescription(name: "body text", code: FCC("ctxt"), type: .text),
             ],
             elements: [
-                ScriptingElementDescription(name: "paragraph", code: FCC("cpar"), objectType: "MockParagraph"),
+                ScriptingElementDescription(name: "paragraph", code: FCC("cpar")),
             ]
         )
     }
@@ -46,10 +46,10 @@ final class MockDocument: ScriptableObject, @unchecked Sendable {
     func setScriptableValue(_ value: any ScriptableValue, forProperty code: FourCharCode) throws {
         switch code {
         case .propertyName:
-            guard let s = value as? String else { throw ScriptingError.typeMismatch(expected: "String") }
+            guard let s = value as? String else { throw ScriptingError.typeMismatch(expected: String.self) }
             name = s
         case FCC("ctxt"):
-            guard let s = value as? String else { throw ScriptingError.typeMismatch(expected: "String") }
+            guard let s = value as? String else { throw ScriptingError.typeMismatch(expected: String.self) }
             bodyText = s
         default:
             throw ScriptingError.propertyNotFound(code)
@@ -65,7 +65,7 @@ final class MockDocument: ScriptableObject, @unchecked Sendable {
 
     func insertScriptableElement(_ object: any ScriptableObject, forCode code: FourCharCode, at index: Int) throws {
         guard code == FCC("cpar"), let p = object as? MockParagraph else {
-            throw ScriptingError.typeMismatch(expected: "MockParagraph")
+            throw ScriptingError.typeMismatch(expected: MockParagraph.self)
         }
         paragraphs.insert(p, at: index)
     }
@@ -110,7 +110,7 @@ final class MockParagraph: ScriptableObject, @unchecked Sendable {
     func setScriptableValue(_ value: any ScriptableValue, forProperty code: FourCharCode) throws {
         switch code {
         case FCC("ctxt"):
-            guard let s = value as? String else { throw ScriptingError.typeMismatch(expected: "String") }
+            guard let s = value as? String else { throw ScriptingError.typeMismatch(expected: String.self) }
             text = s
         default:
             throw ScriptingError.propertyNotFound(code)
@@ -136,7 +136,7 @@ final class MockApp: ScriptableObject, @unchecked Sendable {
                 ScriptingPropertyDescription(name: "name", code: .propertyName, type: .text, isReadOnly: true),
             ],
             elements: [
-                ScriptingElementDescription(name: "document", code: .classDocument, objectType: "MockDocument"),
+                ScriptingElementDescription(name: "document", code: .classDocument),
             ]
         )
     }
@@ -169,7 +169,7 @@ final class MockApp: ScriptableObject, @unchecked Sendable {
 
     func insertScriptableElement(_ object: any ScriptableObject, forCode code: FourCharCode, at index: Int) throws {
         guard code == .classDocument, let doc = object as? MockDocument else {
-            throw ScriptingError.typeMismatch(expected: "MockDocument")
+            throw ScriptingError.typeMismatch(expected: MockDocument.self)
         }
         documents.insert(doc, at: index)
     }

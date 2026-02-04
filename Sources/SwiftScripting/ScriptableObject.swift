@@ -51,7 +51,7 @@ extension ScriptableObject {
 public enum ScriptingError: Error, Sendable, CustomStringConvertible {
     case propertyNotFound(FourCharCode)
     case elementNotFound(FourCharCode)
-    case typeMismatch(expected: String)
+    case typeMismatch(expected: Any.Type)
     case readOnlyProperty(FourCharCode)
     case indexOutOfBounds(index: Int, count: Int)
     case objectNotFound(String)
@@ -65,7 +65,7 @@ public enum ScriptingError: Error, Sendable, CustomStringConvertible {
         case .elementNotFound(let code):
             return "Element not found: \(code)"
         case .typeMismatch(let expected):
-            return "Type mismatch: expected \(expected)"
+            return "Type mismatch: expected \(String(describing: expected))"
         case .readOnlyProperty(let code):
             return "Property is read-only: \(code)"
         case .indexOutOfBounds(let index, let count):

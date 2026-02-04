@@ -1,6 +1,6 @@
 import SwiftScripting
 
-@Scriptable("tdim")
+@Scriptable("todo item", code: "tdim")
 @MainActor
 final class TodoItem: ScriptableObject, @unchecked Sendable {
     @ScriptableProperty("name", code: "pnam")

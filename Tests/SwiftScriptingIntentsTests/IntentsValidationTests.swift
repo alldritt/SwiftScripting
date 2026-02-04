@@ -45,10 +45,10 @@ private final class IntTodoItem: ScriptableObject, @unchecked Sendable {
     func setScriptableValue(_ value: any ScriptableValue, forProperty code: FourCharCode) throws {
         switch code {
         case .propertyName:
-            guard let s = value as? String else { throw ScriptingError.typeMismatch(expected: "String") }
+            guard let s = value as? String else { throw ScriptingError.typeMismatch(expected: String.self) }
             name = s
         case completedCode:
-            guard let b = value as? Bool else { throw ScriptingError.typeMismatch(expected: "Bool") }
+            guard let b = value as? Bool else { throw ScriptingError.typeMismatch(expected: Bool.self) }
             completed = b
         default: throw ScriptingError.propertyNotFound(code)
         }
@@ -73,7 +73,7 @@ private final class IntTodoList: ScriptableObject, @unchecked Sendable {
                 ScriptingPropertyDescription(name: "name", code: .propertyName, type: .text),
             ],
             elements: [
-                ScriptingElementDescription(name: "todo item", code: todoItemCode, objectType: "IntTodoItem"),
+                ScriptingElementDescription(name: "todo item", code: todoItemCode),
             ]
         )
     }
@@ -99,7 +99,7 @@ private final class IntTodoList: ScriptableObject, @unchecked Sendable {
     func setScriptableValue(_ value: any ScriptableValue, forProperty code: FourCharCode) throws {
         switch code {
         case .propertyName:
-            guard let s = value as? String else { throw ScriptingError.typeMismatch(expected: "String") }
+            guard let s = value as? String else { throw ScriptingError.typeMismatch(expected: String.self) }
             name = s
         default: throw ScriptingError.propertyNotFound(code)
         }
@@ -114,7 +114,7 @@ private final class IntTodoList: ScriptableObject, @unchecked Sendable {
 
     func insertScriptableElement(_ object: any ScriptableObject, forCode code: FourCharCode, at index: Int) throws {
         guard code == todoItemCode, let item = object as? IntTodoItem else {
-            throw ScriptingError.typeMismatch(expected: "IntTodoItem")
+            throw ScriptingError.typeMismatch(expected: IntTodoItem.self)
         }
         items.insert(item, at: index)
     }
@@ -135,7 +135,7 @@ private final class IntTodoApp: ScriptableObject, @unchecked Sendable {
                 ScriptingPropertyDescription(name: "name", code: .propertyName, type: .text, isReadOnly: true),
             ],
             elements: [
-                ScriptingElementDescription(name: "todo list", code: todoListCode, objectType: "IntTodoList"),
+                ScriptingElementDescription(name: "todo list", code: todoListCode),
             ]
         )
     }
@@ -157,7 +157,7 @@ private final class IntTodoApp: ScriptableObject, @unchecked Sendable {
     }
     func insertScriptableElement(_ object: any ScriptableObject, forCode code: FourCharCode, at index: Int) throws {
         guard code == todoListCode, let list = object as? IntTodoList else {
-            throw ScriptingError.typeMismatch(expected: "IntTodoList")
+            throw ScriptingError.typeMismatch(expected: IntTodoList.self)
         }
         todoLists.insert(list, at: index)
     }

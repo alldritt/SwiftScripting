@@ -19,8 +19,8 @@ public final class ScriptableApplication: ScriptableObject, @unchecked Sendable 
                 ScriptingPropertyDescription(name: "frontmost", code: FourCharCode("pisf"), type: .boolean, isReadOnly: true),
             ],
             elements: [
-                ScriptingElementDescription(name: "document", code: .classDocument, objectType: "ScriptableDocument"),
-                ScriptingElementDescription(name: "window", code: .classWindow, objectType: "ScriptableWindow"),
+                ScriptingElementDescription(name: "document", code: .classDocument),
+                ScriptingElementDescription(name: "window", code: .classWindow),
             ]
         )
     }
@@ -85,12 +85,12 @@ public final class ScriptableApplication: ScriptableObject, @unchecked Sendable 
         switch code {
         case .classDocument:
             guard let doc = object as? any ScriptableDocument else {
-                throw ScriptingError.typeMismatch(expected: "ScriptableDocument")
+                throw ScriptingError.typeMismatch(expected: (any ScriptableDocument).self)
             }
             documents.insert(doc, at: index)
         case .classWindow:
             guard let window = object as? ScriptableWindow else {
-                throw ScriptingError.typeMismatch(expected: "ScriptableWindow")
+                throw ScriptingError.typeMismatch(expected: ScriptableWindow.self)
             }
             windows.insert(window, at: index)
         default:

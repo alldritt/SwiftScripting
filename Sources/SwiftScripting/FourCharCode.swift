@@ -95,6 +95,8 @@ extension FourCharCode {
     public static let propertyID: FourCharCode = "ID  "
     public static let propertyBestType: FourCharCode = "pbst"
     public static let propertyDefaultType: FourCharCode = "deft"
+    public static let propertySelection: FourCharCode = "sele"
+
 
     // Standard class codes
     public static let classApplication: FourCharCode = "capp"

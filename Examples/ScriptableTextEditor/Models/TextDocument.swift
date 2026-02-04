@@ -5,7 +5,7 @@ import SwiftScripting
 ///
 /// Conforms to both `ScriptableDocument` (for the built-in application model)
 /// and uses `@Scriptable` macro for property/element generation.
-@Scriptable("docu")
+@Scriptable("document", code: "docu")
 @MainActor
 final class TextDocument: ScriptableObject, ScriptableDocument, @unchecked Sendable {
     @ScriptableProperty("name", code: "pnam")
@@ -14,7 +14,7 @@ final class TextDocument: ScriptableObject, ScriptableDocument, @unchecked Senda
     @ScriptableProperty("body text", code: "ctxt")
     var bodyText: String = ""
 
-    @ScriptableElement("paragraph", code: "cpar")
+    @ScriptableElement
     var paragraphs: [TextParagraph] = []
 
     // ScriptableDocument requirements

@@ -10,9 +10,7 @@ typealias FCC = SwiftScripting.FourCharCode
 @Observable
 @MainActor
 final class TodoApplication: ScriptableObject, @unchecked Sendable {
-    static let todoListCode = FCC("tdls")
-
-    static let selectionCode = FCC("sele")
+    static let todoListCode = TodoList.scriptingClassDescription.code
 
     static var scriptingClassDescription: ScriptingClassDescription {
         ScriptingClassDescription(
@@ -20,10 +18,10 @@ final class TodoApplication: ScriptableObject, @unchecked Sendable {
             code: .classApplication,
             properties: [
                 ScriptingPropertyDescription(name: "name", code: .propertyName, type: .text, isReadOnly: true),
-                ScriptingPropertyDescription(name: "selection", code: selectionCode, type: .objectSpecifier("TodoList")),
+                ScriptingPropertyDescription(name: "selection", code: .propertySelection, type: .objectSpecifier(TodoList.self)),
             ],
             elements: [
-                ScriptingElementDescription(name: "todo list", code: todoListCode, objectType: "TodoList"),
+                ScriptingElementDescription(type: TodoList.self),
             ]
         )
     }
@@ -36,15 +34,15 @@ final class TodoApplication: ScriptableObject, @unchecked Sendable {
 
     func scriptableValue(forProperty code: FCC) -> any ScriptableValue {
         switch code {
-        case .propertyName: return "ScriptableTodos"
-        case Self.selectionCode: return selectedList ?? ScriptingMissingValue() as any ScriptableValue
+        case .propertyName: return scriptableName
+        case .propertySelection: return selectedList ?? ScriptingMissingValue() as any ScriptableValue
         default: return "" as any ScriptableValue
         }
     }
 
     func setScriptableValue(_ value: any ScriptableValue, forProperty code: FCC) throws {
         switch code {
-        case Self.selectionCode:
+        case .propertySelection:
             selectedList = value as? TodoList
         default:
             throw ScriptingError.readOnlyProperty(code)
@@ -60,7 +58,7 @@ final class TodoApplication: ScriptableObject, @unchecked Sendable {
 
     func insertScriptableElement(_ object: any ScriptableObject, forCode code: FCC, at index: Int) throws {
         guard code == Self.todoListCode, let list = object as? TodoList else {
-            throw ScriptingError.typeMismatch(expected: "todo list")
+            throw ScriptingError.typeMismatch(expected: TodoList.self)
         }
         todoLists.insert(list, at: index)
     }

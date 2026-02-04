@@ -1,13 +1,17 @@
 import SwiftScripting
 
-@Scriptable("tdls")
+@Scriptable("todo list", code: "tdls")
 @MainActor
 final class TodoList: ScriptableObject, @unchecked Sendable {
-    @ScriptableProperty("name", code: "pnam")
+    @ScriptableProperty("name", code: .propertyName)
     var name: String = "Untitled"
 
-    @ScriptableElement("todo item", code: "tdim")
-    var items: [TodoItem] = []
+    @ScriptableElement
+    var items: [TodoItem] = [] {
+        didSet {
+            print("todo items changed")
+        }
+    }
 
     init(name: String = "Untitled", items: [TodoItem] = []) {
         self.name = name

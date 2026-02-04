@@ -17,7 +17,7 @@ final class TextParagraph: ScriptableObject, @unchecked Sendable {
                 ScriptingPropertyDescription(name: "text", code: FCC("ctxt"), type: .text),
             ],
             elements: [
-                ScriptingElementDescription(name: "word", code: TextWord.classCode, objectType: "TextWord"),
+                ScriptingElementDescription(type: TextWord.self),
             ]
         )
     }
@@ -43,7 +43,7 @@ final class TextParagraph: ScriptableObject, @unchecked Sendable {
     func setScriptableValue(_ value: any ScriptableValue, forProperty code: FCC) throws {
         switch code {
         case FCC("ctxt"):
-            guard let s = value as? String else { throw ScriptingError.typeMismatch(expected: "String") }
+            guard let s = value as? String else { throw ScriptingError.typeMismatch(expected: String.self) }
             text = s
         default:
             throw ScriptingError.propertyNotFound(code)

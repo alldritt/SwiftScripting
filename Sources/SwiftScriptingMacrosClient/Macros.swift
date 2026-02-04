@@ -16,15 +16,19 @@ public protocol _ScriptableObservable: AnyObject, Observable {
 ///
 /// Usage:
 /// ```swift
-/// @Scriptable
+/// @Scriptable("document", code: "docu")
 /// class Document {
 ///     @ScriptableProperty("name", code: "pnam")
 ///     var name: String = "Untitled"
 /// }
 /// ```
 ///
+/// - Parameters:
+///   - name: The SDEF-visible class name (e.g., "todo list"). Defaults to the Swift class name.
+///   - code: The four-char class code (e.g., "docu"). Defaults to the first 4 characters of the class name.
+///
 /// Note: The class must also explicitly conform to `ScriptableObject`
 /// or the generated extension will add conformance.
 @attached(member, names: named(scriptableID), named(scriptableName), named(scriptingClassDescription), named(scriptableValue), named(setScriptableValue), named(scriptableElements), named(insertScriptableElement), named(removeScriptableElement), named(_$observationRegistrar))
 @attached(extension, conformances: Observable, _ScriptableObservable)
-public macro Scriptable(_ classCode: String? = nil) = #externalMacro(module: "SwiftScriptingMacros", type: "ScriptableMacro")
+public macro Scriptable(_ name: String? = nil, code: String? = nil) = #externalMacro(module: "SwiftScriptingMacros", type: "ScriptableMacro")

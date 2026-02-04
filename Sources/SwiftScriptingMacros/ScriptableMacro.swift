@@ -29,8 +29,8 @@ public struct ScriptableMacro: MemberMacro, ExtensionMacro {
 
         let className = classDecl.name.trimmedDescription
 
-        // Extract the four-char code from the macro argument if provided
-        let classCode = extractClassCode(from: node) ?? fourCharCodeFromName(className)
+        // Extract name and code from the macro arguments
+        let (sdefName, classCode) = extractNameAndCode(from: node, className: className)
 
         // Collect property and element metadata
         var propertyEntries: [PropertyEntry] = []
@@ -77,13 +77,13 @@ public struct ScriptableMacro: MemberMacro, ExtensionMacro {
         let propDescriptions = allPropDescriptions.joined(separator: ",\n                ")
 
         let elemDescriptions = elementEntries.map { entry in
-            "ScriptingElementDescription(name: \"\(entry.scriptingName)\", code: \(fcc)(\"\(entry.code)\"), objectType: \"\(entry.elementTypeName)\")"
+            "ScriptingElementDescription(type: \(entry.elementTypeName).self)"
         }.joined(separator: ",\n                ")
 
         members.append("""
         public static var scriptingClassDescription: ScriptingClassDescription {
             ScriptingClassDescription(
-                name: "\(raw: className)",
+                name: "\(raw: sdefName)",
                 code: \(raw: fcc)("\(raw: classCode)"),
                 properties: [
                     \(raw: propDescriptions)
@@ -144,7 +144,7 @@ public struct ScriptableMacro: MemberMacro, ExtensionMacro {
 
         // Generate scriptableElements(forCode:)
         let getElementCases = elementEntries.map { entry in
-            "case \(fcc)(\"\(entry.code)\"): return self.\(entry.variableName).map { $0 as any ScriptableObject }"
+            "case \(entry.elementTypeName).scriptingClassDescription.code: return self.\(entry.variableName).map { $0 as any ScriptableObject }"
         }.joined(separator: "\n            ")
 
         if elementEntries.isEmpty {
@@ -168,9 +168,9 @@ public struct ScriptableMacro: MemberMacro, ExtensionMacro {
         // Generate insertScriptableElement
         let insertElementCases = elementEntries.map { entry in
             """
-            case \(fcc)("\(entry.code)"):
+            case \(entry.elementTypeName).scriptingClassDescription.code:
                         guard let typed = object as? \(entry.elementTypeName) else {
-                            throw ScriptingError.typeMismatch(expected: "\(entry.scriptingName)")
+                            throw ScriptingError.typeMismatch(expected: \(entry.elementTypeName).self)
                         }
                         self.\(entry.variableName).insert(typed, at: index)
             """
@@ -196,7 +196,7 @@ public struct ScriptableMacro: MemberMacro, ExtensionMacro {
 
         // Generate removeScriptableElement
         let removeElementCases = elementEntries.map { entry in
-            "case \(fcc)(\"\(entry.code)\"): self.\(entry.variableName).remove(at: index)"
+            "case \(entry.elementTypeName).scriptingClassDescription.code: self.\(entry.variableName).remove(at: index)"
         }.joined(separator: "\n            ")
 
         if elementEntries.isEmpty {
@@ -253,18 +253,25 @@ public struct ScriptableMacro: MemberMacro, ExtensionMacro {
 
     private struct ElementEntry {
         let variableName: String
-        let scriptingName: String
-        let code: String
         let elementTypeName: String
     }
 
-    private static func extractClassCode(from node: AttributeSyntax) -> String? {
-        guard let arguments = node.arguments?.as(LabeledExprListSyntax.self),
-              let first = arguments.first,
-              let stringLit = first.expression.as(StringLiteralExprSyntax.self) else {
-            return nil
+    private static func extractNameAndCode(from node: AttributeSyntax, className: String) -> (name: String, code: String) {
+        guard let arguments = node.arguments?.as(LabeledExprListSyntax.self) else {
+            return (className, fourCharCodeFromName(className))
         }
-        return stringLit.segments.description
+
+        // First unlabeled argument is the SDEF name
+        let sdefName = arguments.first(where: { $0.label == nil }).flatMap { arg in
+            arg.expression.as(StringLiteralExprSyntax.self)?.segments.description
+        } ?? className
+
+        // Labeled "code" argument is the four-char code
+        let code = arguments.first(where: { $0.label?.text == "code" }).flatMap { arg in
+            arg.expression.as(StringLiteralExprSyntax.self)?.segments.description
+        } ?? fourCharCodeFromName(className)
+
+        return (sdefName, code)
     }
 
     private static func fourCharCodeFromName(_ name: String) -> String {
@@ -314,18 +321,9 @@ public struct ScriptableMacro: MemberMacro, ExtensionMacro {
     private static func extractScriptableElement(from varDecl: VariableDeclSyntax) -> ElementEntry? {
         for attribute in varDecl.attributes {
             guard let attr = attribute.as(AttributeSyntax.self),
-                  attr.attributeName.trimmedDescription == "ScriptableElement",
-                  let arguments = attr.arguments?.as(LabeledExprListSyntax.self) else {
+                  attr.attributeName.trimmedDescription == "ScriptableElement" else {
                 continue
             }
-
-            let scriptingName = arguments.first.flatMap { arg in
-                arg.expression.as(StringLiteralExprSyntax.self)?.segments.description
-            } ?? ""
-
-            let code = arguments.first(where: { $0.label?.text == "code" }).flatMap { arg in
-                arg.expression.as(StringLiteralExprSyntax.self)?.segments.description
-            } ?? ""
 
             guard let binding = varDecl.bindings.first,
                   let pattern = binding.pattern.as(IdentifierPatternSyntax.self) else {
@@ -345,8 +343,6 @@ public struct ScriptableMacro: MemberMacro, ExtensionMacro {
 
             return ElementEntry(
                 variableName: variableName,
-                scriptingName: scriptingName,
-                code: code,
                 elementTypeName: elementTypeName
             )
         }

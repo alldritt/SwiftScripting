@@ -38,6 +38,14 @@ public final class ScriptableObjectRegistry: Sendable {
         factories[code] = factory
     }
 
+    /// Register a factory, deriving the class code from the type's `scriptingClassDescription`.
+    public func registerFactory<T: ScriptableObject>(
+        for type: T.Type,
+        factory: @escaping @MainActor @Sendable () -> T
+    ) {
+        factories[T.scriptingClassDescription.code] = factory
+    }
+
     /// Look up a class description by its four-char code.
     public func classDescription(for code: FourCharCode) -> ScriptingClassDescription? {
         classDescriptions[code]

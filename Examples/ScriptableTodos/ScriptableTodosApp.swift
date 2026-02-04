@@ -42,10 +42,10 @@ struct ScriptableTodosApp: App {
         registry.registerClass(TodoApplication.self)
         registry.registerClass(TodoList.self)
         registry.registerClass(TodoItem.self)
-        registry.registerFactory(for: TodoApplication.todoListCode) {
+        registry.registerFactory(for: TodoList.self) {
             TodoList()
         }
-        registry.registerFactory(for: SwiftScripting.FourCharCode("tdim")) {
+        registry.registerFactory(for: TodoItem.self) {
             TodoItem()
         }
 

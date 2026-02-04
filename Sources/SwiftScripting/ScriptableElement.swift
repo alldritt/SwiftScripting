@@ -2,23 +2,17 @@
 ///
 /// Usage:
 /// ```swift
-/// @Scriptable
+/// @Scriptable("document", code: "docu")
 /// class Document {
-///     @ScriptableElement("paragraph", code: "cpar")
+///     @ScriptableElement
 ///     var paragraphs: [Paragraph] = []
 /// }
 /// ```
 ///
-/// The first argument is the singular AppleScript name. The `code` parameter
-/// is the four-character class code for the contained element type.
+/// The element's SDEF name and four-char code are derived automatically from
+/// the element type's `scriptingClassDescription` by the `@Scriptable` macro.
 @propertyWrapper
 public struct ScriptableElement<Element: ScriptableObject>: Sendable where Element: Sendable {
-    /// The singular AppleScript name for elements in this collection.
-    public let scriptingName: String
-
-    /// The four-character class code for the element type.
-    public let code: String
-
     private var _elements: [Element]
 
     public var wrappedValue: [Element] {
@@ -42,9 +36,7 @@ public struct ScriptableElement<Element: ScriptableObject>: Sendable where Eleme
         }
     }
 
-    public init(wrappedValue: [Element], _ scriptingName: String, code: String) {
+    public init(wrappedValue: [Element]) {
         self._elements = wrappedValue
-        self.scriptingName = scriptingName
-        self.code = code
     }
 }

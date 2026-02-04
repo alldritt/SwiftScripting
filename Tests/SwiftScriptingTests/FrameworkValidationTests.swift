@@ -55,16 +55,16 @@ private final class ValTodoItem: ScriptableObject, @unchecked Sendable {
     func setScriptableValue(_ value: any ScriptableValue, forProperty code: FourCharCode) throws {
         switch code {
         case .propertyName:
-            guard let s = value as? String else { throw ScriptingError.typeMismatch(expected: "String") }
+            guard let s = value as? String else { throw ScriptingError.typeMismatch(expected: String.self) }
             name = s
         case completedCode:
-            guard let b = value as? Bool else { throw ScriptingError.typeMismatch(expected: "Bool") }
+            guard let b = value as? Bool else { throw ScriptingError.typeMismatch(expected: Bool.self) }
             completed = b
         case priorityCode:
-            guard let i = value as? Int else { throw ScriptingError.typeMismatch(expected: "Int") }
+            guard let i = value as? Int else { throw ScriptingError.typeMismatch(expected: Int.self) }
             priority = i
         case notesCode:
-            guard let s = value as? String else { throw ScriptingError.typeMismatch(expected: "String") }
+            guard let s = value as? String else { throw ScriptingError.typeMismatch(expected: String.self) }
             notes = s
         default:
             throw ScriptingError.propertyNotFound(code)
@@ -90,7 +90,7 @@ private final class ValTodoList: ScriptableObject, @unchecked Sendable {
                 ScriptingPropertyDescription(name: "name", code: .propertyName, type: .text),
             ],
             elements: [
-                ScriptingElementDescription(name: "todo item", code: todoItemCode, objectType: "ValTodoItem"),
+                ScriptingElementDescription(name: "todo item", code: todoItemCode),
             ]
         )
     }
@@ -116,7 +116,7 @@ private final class ValTodoList: ScriptableObject, @unchecked Sendable {
     func setScriptableValue(_ value: any ScriptableValue, forProperty code: FourCharCode) throws {
         switch code {
         case .propertyName:
-            guard let s = value as? String else { throw ScriptingError.typeMismatch(expected: "String") }
+            guard let s = value as? String else { throw ScriptingError.typeMismatch(expected: String.self) }
             name = s
         default:
             throw ScriptingError.propertyNotFound(code)
@@ -132,7 +132,7 @@ private final class ValTodoList: ScriptableObject, @unchecked Sendable {
 
     func insertScriptableElement(_ object: any ScriptableObject, forCode code: FourCharCode, at index: Int) throws {
         guard code == todoItemCode, let item = object as? ValTodoItem else {
-            throw ScriptingError.typeMismatch(expected: "ValTodoItem")
+            throw ScriptingError.typeMismatch(expected: ValTodoItem.self)
         }
         items.insert(item, at: index)
     }
@@ -153,7 +153,7 @@ private final class ValTodoApp: ScriptableObject, @unchecked Sendable {
                 ScriptingPropertyDescription(name: "name", code: .propertyName, type: .text, isReadOnly: true),
             ],
             elements: [
-                ScriptingElementDescription(name: "todo list", code: todoListCode, objectType: "ValTodoList"),
+                ScriptingElementDescription(name: "todo list", code: todoListCode),
             ]
         )
     }
@@ -186,7 +186,7 @@ private final class ValTodoApp: ScriptableObject, @unchecked Sendable {
 
     func insertScriptableElement(_ object: any ScriptableObject, forCode code: FourCharCode, at index: Int) throws {
         guard code == todoListCode, let list = object as? ValTodoList else {
-            throw ScriptingError.typeMismatch(expected: "ValTodoList")
+            throw ScriptingError.typeMismatch(expected: ValTodoList.self)
         }
         todoLists.insert(list, at: index)
     }
@@ -236,7 +236,7 @@ private final class ValParagraph: ScriptableObject, @unchecked Sendable {
         ScriptingClassDescription(
             name: "paragraph", code: parCode,
             properties: [ScriptingPropertyDescription(name: "text", code: textCode, type: .text)],
-            elements: [ScriptingElementDescription(name: "word", code: wordCode, objectType: "ValWord")]
+            elements: [ScriptingElementDescription(name: "word", code: wordCode)]
         )
     }
 
@@ -256,7 +256,7 @@ private final class ValParagraph: ScriptableObject, @unchecked Sendable {
     func setScriptableValue(_ value: any ScriptableValue, forProperty code: FourCharCode) throws {
         switch code {
         case textCode:
-            guard let s = value as? String else { throw ScriptingError.typeMismatch(expected: "String") }
+            guard let s = value as? String else { throw ScriptingError.typeMismatch(expected: String.self) }
             text = s
         default: throw ScriptingError.propertyNotFound(code)
         }
@@ -286,7 +286,7 @@ private final class ValTextDoc: ScriptableObject, @unchecked Sendable {
                 ScriptingPropertyDescription(name: "name", code: .propertyName, type: .text),
                 ScriptingPropertyDescription(name: "body text", code: textCode, type: .text),
             ],
-            elements: [ScriptingElementDescription(name: "paragraph", code: parCode, objectType: "ValParagraph")]
+            elements: [ScriptingElementDescription(name: "paragraph", code: parCode)]
         )
     }
 
@@ -314,10 +314,10 @@ private final class ValTextDoc: ScriptableObject, @unchecked Sendable {
     func setScriptableValue(_ value: any ScriptableValue, forProperty code: FourCharCode) throws {
         switch code {
         case .propertyName:
-            guard let s = value as? String else { throw ScriptingError.typeMismatch(expected: "String") }
+            guard let s = value as? String else { throw ScriptingError.typeMismatch(expected: String.self) }
             name = s
         case textCode:
-            guard let s = value as? String else { throw ScriptingError.typeMismatch(expected: "String") }
+            guard let s = value as? String else { throw ScriptingError.typeMismatch(expected: String.self) }
             bodyText = s
         default: throw ScriptingError.propertyNotFound(code)
         }
@@ -332,7 +332,7 @@ private final class ValTextDoc: ScriptableObject, @unchecked Sendable {
 
     func insertScriptableElement(_ object: any ScriptableObject, forCode code: FourCharCode, at index: Int) throws {
         guard code == parCode, let p = object as? ValParagraph else {
-            throw ScriptingError.typeMismatch(expected: "ValParagraph")
+            throw ScriptingError.typeMismatch(expected: ValParagraph.self)
         }
         paragraphs.insert(p, at: index)
     }
@@ -410,7 +410,7 @@ private final class ValTextApp: ScriptableObject, @unchecked Sendable {
         ScriptingClassDescription(
             name: "application", code: .classApplication,
             properties: [ScriptingPropertyDescription(name: "name", code: .propertyName, type: .text, isReadOnly: true)],
-            elements: [ScriptingElementDescription(name: "document", code: .classDocument, objectType: "ValTextDoc")]
+            elements: [ScriptingElementDescription(name: "document", code: .classDocument)]
         )
     }
 
@@ -428,7 +428,7 @@ private final class ValTextApp: ScriptableObject, @unchecked Sendable {
         switch code { case .classDocument: return documents; default: return [] }
     }
     func insertScriptableElement(_ object: any ScriptableObject, forCode code: FourCharCode, at index: Int) throws {
-        guard code == .classDocument, let doc = object as? ValTextDoc else { throw ScriptingError.typeMismatch(expected: "ValTextDoc") }
+        guard code == .classDocument, let doc = object as? ValTextDoc else { throw ScriptingError.typeMismatch(expected: ValTextDoc.self) }
         documents.insert(doc, at: index)
     }
     func removeScriptableElement(at index: Int, forCode code: FourCharCode) throws {
