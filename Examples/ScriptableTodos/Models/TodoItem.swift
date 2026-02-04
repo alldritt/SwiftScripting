@@ -3,7 +3,7 @@ import SwiftScripting
 @Scriptable("todo item", code: "tdim")
 @MainActor
 final class TodoItem: ScriptableObject, @unchecked Sendable {
-    @ScriptableProperty("name", code: "pnam")
+    @ScriptableProperty("name", code: .propertyName)
     var name: String = ""
 
     @ScriptableProperty("completed", code: "done")
