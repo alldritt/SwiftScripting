@@ -30,7 +30,7 @@ public struct ScriptableMacro: MemberMacro, ExtensionMacro {
         let className = classDecl.name.trimmedDescription
 
         // Extract name and code from the macro arguments
-        let (sdefName, classCode) = extractNameAndCode(from: node, className: className)
+        let (sdefName, classCodeExpr) = extractNameAndCode(from: node, className: className)
 
         // Collect property and element metadata
         var propertyEntries: [PropertyEntry] = []
@@ -72,7 +72,7 @@ public struct ScriptableMacro: MemberMacro, ExtensionMacro {
             "ScriptingPropertyDescription(name: \"id\", code: .propertyID, type: String.scriptingType, isReadOnly: true)"
         ]
         allPropDescriptions += propertyEntries.map { entry in
-            "ScriptingPropertyDescription(name: \"\(entry.scriptingName)\", code: \(fcc)(\"\(entry.code)\"), type: \(entry.typeName).scriptingType, isReadOnly: \(entry.isReadOnly))"
+            "ScriptingPropertyDescription(name: \"\(entry.scriptingName)\", code: \(entry.codeExpr), type: \(entry.typeName).scriptingType, isReadOnly: \(entry.isReadOnly))"
         }
         let propDescriptions = allPropDescriptions.joined(separator: ",\n                ")
 
@@ -84,7 +84,7 @@ public struct ScriptableMacro: MemberMacro, ExtensionMacro {
         public static var scriptingClassDescription: ScriptingClassDescription {
             ScriptingClassDescription(
                 name: "\(raw: sdefName)",
-                code: \(raw: fcc)("\(raw: classCode)"),
+                code: \(raw: classCodeExpr),
                 properties: [
                     \(raw: propDescriptions)
                 ],
@@ -97,7 +97,7 @@ public struct ScriptableMacro: MemberMacro, ExtensionMacro {
 
         // Generate scriptableValue(forProperty:)
         let getPropertyCases = propertyEntries.map { entry in
-            "case \(fcc)(\"\(entry.code)\"): return self.\(entry.variableName) as any ScriptableValue"
+            "case \(entry.codeExpr): return self.\(entry.variableName) as any ScriptableValue"
         }.joined(separator: "\n            ")
 
         if propertyEntries.isEmpty {
@@ -121,7 +121,7 @@ public struct ScriptableMacro: MemberMacro, ExtensionMacro {
         // Generate setScriptableValue(_:forProperty:)
         let writableEntries = propertyEntries.filter { !$0.isReadOnly }
         let setPropertyCases = writableEntries.map { entry in
-            "case \(fcc)(\"\(entry.code)\"): self.\(entry.variableName) = value as! \(entry.typeName)"
+            "case \(entry.codeExpr): self.\(entry.variableName) = value as! \(entry.typeName)"
         }.joined(separator: "\n            ")
 
         if writableEntries.isEmpty {
@@ -246,7 +246,7 @@ public struct ScriptableMacro: MemberMacro, ExtensionMacro {
     private struct PropertyEntry {
         let variableName: String
         let scriptingName: String
-        let code: String
+        let codeExpr: String  // Full expression to emit in generated code
         let typeName: String
         let isReadOnly: Bool
     }
@@ -256,9 +256,9 @@ public struct ScriptableMacro: MemberMacro, ExtensionMacro {
         let elementTypeName: String
     }
 
-    private static func extractNameAndCode(from node: AttributeSyntax, className: String) -> (name: String, code: String) {
+    private static func extractNameAndCode(from node: AttributeSyntax, className: String) -> (name: String, codeExpr: String) {
         guard let arguments = node.arguments?.as(LabeledExprListSyntax.self) else {
-            return (className, fourCharCodeFromName(className))
+            return (className, "\(fcc)(\"\(fourCharCodeFromName(className))\")")
         }
 
         // First unlabeled argument is the SDEF name
@@ -267,16 +267,34 @@ public struct ScriptableMacro: MemberMacro, ExtensionMacro {
         } ?? className
 
         // Labeled "code" argument is the four-char code
-        let code = arguments.first(where: { $0.label?.text == "code" }).flatMap { arg in
-            arg.expression.as(StringLiteralExprSyntax.self)?.segments.description
-        } ?? fourCharCodeFromName(className)
+        let codeExpr: String
+        if let codeArg = arguments.first(where: { $0.label?.text == "code" }) {
+            codeExpr = codeExpression(from: codeArg.expression)
+        } else {
+            codeExpr = "\(fcc)(\"\(fourCharCodeFromName(className))\")"
+        }
 
-        return (sdefName, code)
+        return (sdefName, codeExpr)
     }
 
     private static func fourCharCodeFromName(_ name: String) -> String {
         let padded = name.prefix(4).padding(toLength: 4, withPad: " ", startingAt: 0)
         return padded
+    }
+
+    /// Convert a code argument expression to a fully-qualified expression string for code generation.
+    /// String literals like `"pnam"` become `SwiftScripting.FourCharCode("pnam")`.
+    /// Member access like `.propertyName` becomes `SwiftScripting.FourCharCode.propertyName`.
+    /// Other expressions (e.g. `FourCharCode("pnam")`) are emitted as-is.
+    private static func codeExpression(from expr: ExprSyntax) -> String {
+        if let stringLiteral = expr.as(StringLiteralExprSyntax.self) {
+            return "\(fcc)(\"\(stringLiteral.segments.description)\")"
+        }
+        let text = expr.trimmedDescription
+        if text.hasPrefix(".") {
+            return "\(fcc)\(text)"
+        }
+        return text
     }
 
     private static func extractScriptableProperty(from varDecl: VariableDeclSyntax) -> PropertyEntry? {
@@ -291,9 +309,12 @@ public struct ScriptableMacro: MemberMacro, ExtensionMacro {
                 arg.expression.as(StringLiteralExprSyntax.self)?.segments.description
             } ?? ""
 
-            let code = arguments.first(where: { $0.label?.text == "code" }).flatMap { arg in
-                arg.expression.as(StringLiteralExprSyntax.self)?.segments.description
-            } ?? ""
+            let codeExpr: String
+            if let codeArg = arguments.first(where: { $0.label?.text == "code" }) {
+                codeExpr = codeExpression(from: codeArg.expression)
+            } else {
+                codeExpr = "\(fcc)(\"\")"
+            }
 
             let isReadOnly = arguments.first(where: { $0.label?.text == "readOnly" }).flatMap { arg in
                 arg.expression.as(BooleanLiteralExprSyntax.self)?.literal.text == "true"
@@ -310,7 +331,7 @@ public struct ScriptableMacro: MemberMacro, ExtensionMacro {
             return PropertyEntry(
                 variableName: variableName,
                 scriptingName: scriptingName,
-                code: code,
+                codeExpr: codeExpr,
                 typeName: typeName,
                 isReadOnly: isReadOnly
             )
