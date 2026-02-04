@@ -64,6 +64,7 @@
             <cocoa class="NSApplication"/>
             <property name="name" code="pnam" type="text" access="r" description="The name of the application."/>
             <element type="document"/>
+            <element type="window"/>
         </class>
 
         <class name="document" code="docu" description="A text document." plural="documents">
@@ -71,20 +72,30 @@
             <property name="id" code="ID  " type="text" access="r" description="The unique identifier of the document."/>
             <property name="name" code="pnam" type="text" access="rw" description="The name of the document."/>
             <property name="body text" code="ctxt" type="text" access="rw" description="The text content of the document."/>
+            <property name="window" code="dwin" type="window" access="r" description="The window of the document."/>
             <element type="paragraph"/>
+            <element type="word"/>
         </class>
 
         <class name="paragraph" code="cpar" description="A paragraph of text." plural="paragraphs">
             <cocoa class="TextParagraph"/>
-            <property name="id" code="ID  " type="text" access="r" description="The unique identifier of the paragraph."/>
             <property name="text" code="ctxt" type="text" access="rw" description="The text of the paragraph."/>
             <element type="word"/>
         </class>
 
         <class name="word" code="cwor" description="A word in a paragraph." plural="words">
             <cocoa class="TextWord"/>
-            <property name="id" code="ID  " type="text" access="r" description="The unique identifier of the word."/>
             <property name="text" code="ctxt" type="text" access="r" description="The text of the word."/>
+        </class>
+
+        <class name="window" code="cwin" description="A window." plural="windows">
+            <cocoa class="TextEditorWindow"/>
+            <property name="name" code="pnam" type="text" access="r" description="The title of the window."/>
+            <property name="index" code="pidx" type="integer" access="rw" description="The index of the window, ordered front to back."/>
+            <property name="visible" code="pvis" type="boolean" access="rw" description="Whether the window is currently visible."/>
+            <property name="miniaturized" code="pmnd" type="boolean" access="rw" description="Whether the window is currently miniaturized."/>
+            <property name="zoomed" code="pzum" type="boolean" access="rw" description="Whether the window is currently zoomed."/>
+            <property name="document" code="wdoc" type="document" access="r" description="The document displayed in the window."/>
         </class>
 
     </suite>

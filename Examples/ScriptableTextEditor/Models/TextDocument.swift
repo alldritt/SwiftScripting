@@ -19,6 +19,11 @@ final class TextDocument: ScriptableObject, ReferenceFileDocument, ObservableObj
             code: .classDocument,
             properties: [
                 ScriptingPropertyDescription(
+                    name: "id", code: .propertyID, type: .text, isReadOnly: true,
+                    getter: { ($0 as! TextDocument).scriptableID },
+                    setter: nil
+                ),
+                ScriptingPropertyDescription(
                     name: "name", code: .propertyName, type: .text,
                     getter: { ($0 as! TextDocument).name },
                     setter: { ($0 as! TextDocument).name = $1 as! String }
@@ -27,6 +32,11 @@ final class TextDocument: ScriptableObject, ReferenceFileDocument, ObservableObj
                     name: "body text", code: FourCharCode("ctxt"), type: .text,
                     getter: { ($0 as! TextDocument).bodyText },
                     setter: { ($0 as! TextDocument).bodyText = $1 as! String }
+                ),
+                ScriptingPropertyDescription(
+                    name: "window", code: FourCharCode("dwin"), type: .objectSpecifier("window"), isReadOnly: true,
+                    getter: { ($0 as! TextDocument).window ?? ScriptingMissingValue() as any ScriptableValue },
+                    setter: nil
                 ),
             ],
             elements: [
@@ -45,6 +55,16 @@ final class TextDocument: ScriptableObject, ReferenceFileDocument, ObservableObj
                         (parent as! TextDocument).syncBodyFromParagraphs()
                     }
                 ),
+                ScriptingElementDescription(
+                    type: TextWord.self,
+                    getter: { doc in
+                        (doc as! TextDocument).bodyText
+                            .split(separator: /\s+/)
+                            .map { TextWord(text: String($0)) }
+                    },
+                    inserter: { _, _, _ in throw ScriptingError.commandFailed("Words are computed and cannot be inserted directly") },
+                    remover: { _, _ in throw ScriptingError.commandFailed("Words are computed and cannot be removed directly") }
+                ),
             ]
         )
     }
@@ -55,6 +75,9 @@ final class TextDocument: ScriptableObject, ReferenceFileDocument, ObservableObj
     @Published var name: String = "Untitled"
     @Published var bodyText: String = ""
     @Published var paragraphs: [TextParagraph] = []
+
+    /// The associated window, set by the app when the document is registered.
+    weak var window: TextEditorWindow?
 
     /// Pending file content set from `nonisolated init(configuration:)`.
     /// Applied on first access from the main actor.
@@ -119,4 +142,11 @@ final class TextDocument: ScriptableObject, ReferenceFileDocument, ObservableObj
     func syncBodyFromParagraphs() {
         bodyText = paragraphs.map(\.text).joined(separator: "\n")
     }
+}
+
+// MARK: - ScriptableDocument (lightweight conformance for window back-reference)
+
+extension TextDocument: ScriptableDocument {
+    var modified: Bool { false }
+    var filePath: URL? { nil }
 }

@@ -34,6 +34,12 @@ final class TextEditorApplication: ScriptableObject, @unchecked Sendable {
                         (parent as! TextEditorApplication).documents.remove(at: index)
                     }
                 ),
+                ScriptingElementDescription(
+                    type: TextEditorWindow.self,
+                    getter: { ($0 as! TextEditorApplication).windows.map { $0 as any ScriptableObject } },
+                    inserter: { _, _, _ in throw ScriptingError.commandFailed("Windows are managed by the system") },
+                    remover: { _, _ in throw ScriptingError.commandFailed("Windows are managed by the system") }
+                ),
             ]
         )
     }
@@ -41,4 +47,5 @@ final class TextEditorApplication: ScriptableObject, @unchecked Sendable {
     nonisolated let scriptableID = "application"
     var scriptableName: String? { "ScriptableTextEditor" }
     var documents: [TextDocument] = []
+    var windows: [TextEditorWindow] = []
 }

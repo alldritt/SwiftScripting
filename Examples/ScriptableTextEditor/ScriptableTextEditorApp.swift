@@ -26,12 +26,22 @@ struct ScriptableTextEditorApp: App {
     private func registerDocument(_ doc: TextDocument) {
         if !application.documents.contains(where: { $0.scriptableID == doc.scriptableID }) {
             application.documents.append(doc)
+            let window = TextEditorWindow(name: doc.name, index: application.windows.count + 1)
+            window.document = doc
+            doc.window = window
+            application.windows.append(window)
         }
     }
 
     @MainActor
     private func unregisterDocument(_ doc: TextDocument) {
-        application.documents.removeAll { $0.scriptableID == doc.scriptableID }
+        if let index = application.documents.firstIndex(where: { $0.scriptableID == doc.scriptableID }) {
+            doc.window = nil
+            application.documents.remove(at: index)
+            if index < application.windows.count {
+                application.windows.remove(at: index)
+            }
+        }
     }
 
     @MainActor
@@ -44,6 +54,7 @@ struct ScriptableTextEditorApp: App {
         registry.registerClass(TextDocument.self)
         registry.registerClass(TextParagraph.self)
         registry.registerClass(TextWord.self)
+        registry.registerClass(TextEditorWindow.self)
         registry.registerFactory(for: .classDocument) {
             TextDocument()
         }
