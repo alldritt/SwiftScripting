@@ -1,0 +1,36 @@
+name: ScriptableTodos
+options:
+  bundleIdPrefix: com.latenightsw
+  deploymentTarget:
+    macOS: "15.0"
+    iOS: "18.0"
+
+localPackages:
+  - ../..
+
+targets:
+  ScriptableTodos:
+    type: application
+    supportedDestinations: [macOS, iOS]
+    sources:
+      - path: .
+        excludes:
+          - project.yml
+          - "*.xcodeproj"
+          - "*.sdef"
+          - Info.plist
+      - path: ScriptableTodos.sdef
+        buildPhase: resources
+    info:
+      path: Info.plist
+      properties:
+        NSAppleScriptEnabled: true
+        OSAScriptingDefinition: ScriptableTodos.sdef
+    settings:
+      SWIFT_VERSION: "6.0"
+      PRODUCT_BUNDLE_IDENTIFIER: com.latenightsw.ScriptableTodos
+    dependencies:
+      - package: SwiftScripting
+        product: SwiftScripting
+      - package: SwiftScripting
+        product: SwiftScriptingAppleEvents

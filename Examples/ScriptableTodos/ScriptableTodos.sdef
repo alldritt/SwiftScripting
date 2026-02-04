@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dictionary SYSTEM "file://localhost/System/Library/DTDs/sdef.dtd">
+<dictionary title="ScriptableTodos Terminology">
+
+    <!--
+        Standard Suite
+        Basic commands every scriptable application should support.
+    -->
+    <suite name="Standard Suite" code="core" description="Common commands for all applications.">
+
+        <command name="get" code="coregetd" description="Get the data for an object.">
+            <direct-parameter type="specifier" description="The object(s) to get."/>
+            <result type="any" description="The value of the object."/>
+        </command>
+
+        <command name="set" code="coresetd" description="Set an object's data.">
+            <direct-parameter type="specifier" description="The object(s) to change."/>
+            <parameter name="to" code="data" type="any" description="The new value."/>
+        </command>
+
+        <command name="count" code="corecnte" description="Return the number of elements of a particular class within an object.">
+            <direct-parameter type="specifier" description="The objects to count."/>
+            <parameter name="each" code="kocl" type="type" optional="yes" description="The class of objects to count."/>
+            <result type="integer" description="The count."/>
+        </command>
+
+        <command name="make" code="corecrel" description="Create a new object.">
+            <parameter name="new" code="kocl" type="type" description="The class of the new object."/>
+            <parameter name="at" code="insh" type="location specifier" optional="yes" description="The location at which to insert the object."/>
+            <parameter name="with properties" code="prdt" type="record" optional="yes" description="The initial values for properties of the object."/>
+            <result type="specifier" description="The new object."/>
+        </command>
+
+        <command name="delete" code="coredelo" description="Delete an object.">
+            <direct-parameter type="specifier" description="The object(s) to delete."/>
+        </command>
+
+        <command name="exists" code="coredoex" description="Verify that an object exists.">
+            <direct-parameter type="specifier" description="The object(s) to check."/>
+            <result type="boolean" description="Did the object exist?"/>
+        </command>
+
+        <command name="move" code="coremove" description="Move an object to a new location.">
+            <direct-parameter type="specifier" description="The object(s) to move."/>
+            <parameter name="to" code="insh" type="location specifier" description="The new location for the object(s)."/>
+            <result type="specifier" description="The moved object(s)."/>
+        </command>
+
+        <command name="duplicate" code="coreclon" description="Copy an object.">
+            <direct-parameter type="specifier" description="The object(s) to copy."/>
+            <parameter name="to" code="insh" type="location specifier" optional="yes" description="The location for the new copy."/>
+            <result type="specifier" description="The duplicated object(s)."/>
+        </command>
+
+    </suite>
+
+    <!--
+        ScriptableTodos Suite
+        Classes and commands specific to the ScriptableTodos application.
+    -->
+    <suite name="ScriptableTodos Suite" code="ScTd" description="Classes for the ScriptableTodos application.">
+
+        <class name="application" code="capp" description="The ScriptableTodos application." plural="applications">
+            <cocoa class="NSApplication"/>
+            <property name="name" code="pnam" type="text" access="r" description="The name of the application."/>
+            <property name="selection" code="sele" type="todo list" access="rw" description="The currently selected to-do list."/>
+            <element type="todo list"/>
+        </class>
+
+        <class name="todo list" code="tdls" description="A list of to-do items." plural="todo lists">
+            <cocoa class="TodoList"/>
+            <property name="id" code="ID  " type="text" access="r" description="The unique identifier of the to-do list."/>
+            <property name="name" code="pnam" type="text" access="rw" description="The name of the to-do list."/>
+            <element type="todo item"/>
+        </class>
+
+        <class name="todo item" code="tdim" description="A to-do item." plural="todo items">
+            <cocoa class="TodoItem"/>
+            <property name="id" code="ID  " type="text" access="r" description="The unique identifier of the to-do item."/>
+            <property name="name" code="pnam" type="text" access="rw" description="The name of the to-do item."/>
+            <property name="completed" code="done" type="boolean" access="rw" description="Whether the item is completed."/>
+            <property name="priority" code="prio" type="integer" access="rw" description="The priority of the item (0 = none)."/>
+            <property name="notes" code="note" type="text" access="rw" description="Notes for the item."/>
+        </class>
+
+    </suite>
+
+</dictionary>

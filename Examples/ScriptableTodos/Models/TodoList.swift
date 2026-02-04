@@ -1,6 +1,6 @@
 import SwiftScripting
 
-@Scriptable
+@Scriptable("tdls")
 @MainActor
 final class TodoList: ScriptableObject, @unchecked Sendable {
     @ScriptableProperty("name", code: "pnam")

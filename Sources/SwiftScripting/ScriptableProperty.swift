@@ -34,6 +34,22 @@ public struct ScriptableProperty<Value: ScriptableValue>: Sendable where Value: 
         set { _value = newValue }
     }
 
+    public static subscript<EnclosingSelf: _ScriptableObservable>(
+        _enclosingInstance observed: EnclosingSelf,
+        wrapped wrappedKeyPath: ReferenceWritableKeyPath<EnclosingSelf, Value>,
+        storage storageKeyPath: ReferenceWritableKeyPath<EnclosingSelf, Self>
+    ) -> Value {
+        get {
+            observed._$observationRegistrar.access(observed, keyPath: wrappedKeyPath)
+            return observed[keyPath: storageKeyPath]._value
+        }
+        set {
+            observed._$observationRegistrar.withMutation(of: observed, keyPath: wrappedKeyPath) {
+                observed[keyPath: storageKeyPath]._value = newValue
+            }
+        }
+    }
+
     public init(wrappedValue: Value, _ scriptingName: String, code: String, readOnly: Bool = false) {
         self._value = wrappedValue
         self.scriptingName = scriptingName

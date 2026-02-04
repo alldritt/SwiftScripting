@@ -29,8 +29,16 @@ public enum DescriptorPacking {
         case let url as URL:
             return packURL(url)
         default:
+            // Check for ScriptableObject — return as object specifier reference
+            if let obj = value as? any ScriptableObject {
+                return packObjectReference(obj)
+            }
             if let array = value as? [any ScriptableValue] {
                 return packList(array)
+            }
+            // Check for nil optionals — return missing value
+            if case Optional<Any>.none = value as Any {
+                return NSAppleEventDescriptor(typeCode: UInt32(cMissingValue))
             }
             return NSAppleEventDescriptor(string: String(describing: value))
         }
@@ -264,6 +272,51 @@ public enum DescriptorPacking {
             forKeyword: AEKeyword(keyAEKeyData)
         )
         return record.coerce(toDescriptorType: typeObjectSpecifier) ?? record
+    }
+
+    private static func buildIndexSpecifier(
+        classCode: ScriptFourCharCode,
+        index: Int,
+        container: NSAppleEventDescriptor
+    ) -> NSAppleEventDescriptor {
+        let record = NSAppleEventDescriptor.record()
+        record.setDescriptor(
+            NSAppleEventDescriptor(typeCode: classCode.rawValue),
+            forKeyword: AEKeyword(keyAEDesiredClass)
+        )
+        record.setDescriptor(container, forKeyword: AEKeyword(keyAEContainer))
+        record.setDescriptor(
+            NSAppleEventDescriptor(enumCode: OSType(formAbsolutePosition)),
+            forKeyword: AEKeyword(keyAEKeyForm)
+        )
+        record.setDescriptor(
+            NSAppleEventDescriptor(int32: Int32(index)),
+            forKeyword: AEKeyword(keyAEKeyData)
+        )
+        return record.coerce(toDescriptorType: typeObjectSpecifier) ?? record
+    }
+
+    // MARK: - Specifier Packing (ObjectSpecifier → AEDescriptor)
+
+    /// Converts a parsed `ObjectSpecifier` back into an `NSAppleEventDescriptor`.
+    /// Used to build proper container chains when returning object references.
+    public static func packSpecifier(_ specifier: ObjectSpecifier) -> NSAppleEventDescriptor {
+        switch specifier {
+        case .application:
+            return NSAppleEventDescriptor.null()
+        case .name(let classCode, let name, let container):
+            let containerDesc = container.map { packSpecifier($0) } ?? NSAppleEventDescriptor.null()
+            return buildNameSpecifier(classCode: classCode, name: name, container: containerDesc)
+        case .index(let classCode, let index, let container):
+            let containerDesc = container.map { packSpecifier($0) } ?? NSAppleEventDescriptor.null()
+            return buildIndexSpecifier(classCode: classCode, index: index, container: containerDesc)
+        case .id(let classCode, let id, let container):
+            let containerDesc = container.map { packSpecifier($0) } ?? NSAppleEventDescriptor.null()
+            return buildIDSpecifier(classCode: classCode, id: id, container: containerDesc)
+        default:
+            // For every, property, whose, range — resolve to null (application) container
+            return NSAppleEventDescriptor.null()
+        }
     }
 }
 #endif

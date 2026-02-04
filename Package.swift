@@ -71,12 +71,14 @@ let package = Package(
             name: "ScriptableTodos",
             dependencies: ["SwiftScripting", "SwiftScriptingAppleEvents"],
             path: "Examples/ScriptableTodos",
+            exclude: ["project.yml", "ObjC", "ScriptableTodos.sdef", "Info.plist"],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .executableTarget(
             name: "ScriptableTextEditor",
             dependencies: ["SwiftScripting", "SwiftScriptingAppleEvents"],
             path: "Examples/ScriptableTextEditor",
+            exclude: ["project.yml"],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
 

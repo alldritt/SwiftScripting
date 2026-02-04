@@ -12,12 +12,15 @@ typealias FCC = SwiftScripting.FourCharCode
 final class TodoApplication: ScriptableObject, @unchecked Sendable {
     static let todoListCode = FCC("tdls")
 
+    static let selectionCode = FCC("sele")
+
     static var scriptingClassDescription: ScriptingClassDescription {
         ScriptingClassDescription(
             name: "application",
             code: .classApplication,
             properties: [
                 ScriptingPropertyDescription(name: "name", code: .propertyName, type: .text, isReadOnly: true),
+                ScriptingPropertyDescription(name: "selection", code: selectionCode, type: .objectSpecifier("TodoList")),
             ],
             elements: [
                 ScriptingElementDescription(name: "todo list", code: todoListCode, objectType: "TodoList"),
@@ -29,16 +32,23 @@ final class TodoApplication: ScriptableObject, @unchecked Sendable {
     var scriptableName: String? { "ScriptableTodos" }
 
     var todoLists: [TodoList] = []
+    var selectedList: TodoList?
 
     func scriptableValue(forProperty code: FCC) -> any ScriptableValue {
         switch code {
         case .propertyName: return "ScriptableTodos"
+        case Self.selectionCode: return selectedList as (any ScriptableValue)? ?? "" as any ScriptableValue
         default: return "" as any ScriptableValue
         }
     }
 
     func setScriptableValue(_ value: any ScriptableValue, forProperty code: FCC) throws {
-        throw ScriptingError.readOnlyProperty(code)
+        switch code {
+        case Self.selectionCode:
+            selectedList = value as? TodoList
+        default:
+            throw ScriptingError.readOnlyProperty(code)
+        }
     }
 
     func scriptableElements(forCode code: FCC) -> [any ScriptableObject] {

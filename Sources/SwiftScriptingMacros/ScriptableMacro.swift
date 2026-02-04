@@ -212,9 +212,9 @@ public struct ScriptableMacro: MemberMacro, ExtensionMacro {
             """)
         }
 
-        // Generate Observation tracking storage
+        // Generate Observation tracking storage (public to satisfy _ScriptableObservable protocol)
         members.append("""
-        @ObservationIgnored private let _$observationRegistrar = Observation.ObservationRegistrar()
+        @ObservationIgnored public let _$observationRegistrar = Observation.ObservationRegistrar()
         """)
 
         return members
@@ -230,7 +230,7 @@ public struct ScriptableMacro: MemberMacro, ExtensionMacro {
         in context: some MacroExpansionContext
     ) throws -> [ExtensionDeclSyntax] {
         let ext: DeclSyntax = """
-        extension \(type.trimmed): Observable {}
+        extension \(type.trimmed): Observable, SwiftScripting._ScriptableObservable {}
         """
         guard let extDecl = ext.as(ExtensionDeclSyntax.self) else { return [] }
         return [extDecl]

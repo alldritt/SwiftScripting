@@ -29,17 +29,34 @@ public final class CoreSuiteHandlers: Sendable {
             guard let target = containers.first else {
                 throw AppleEventError.noSuchObject("No container for property \(propertyCode)")
             }
-            let value = target.scriptableValue(forProperty: propertyCode)
-            return DescriptorPacking.pack(value)
+
+            // Handle standard built-in properties before delegating to the object
+            switch propertyCode {
+            case .propertyID:
+                return DescriptorPacking.pack(target.scriptableID)
+            case .propertyClass:
+                let classCode = type(of: target).scriptingClassDescription.code
+                return NSAppleEventDescriptor(typeCode: classCode.rawValue)
+            default:
+                let value = target.scriptableValue(forProperty: propertyCode)
+                return DescriptorPacking.pack(value)
+            }
 
         default:
             let objects = try resolver.resolve(specifier)
+            // Build the container descriptor from the specifier's container chain
+            // so returned object references include the full path (e.g.
+            // todo item "Milk" of todo list "Shopping" rather than just todo item "Milk")
+            let containerDesc = specifier.container.map {
+                DescriptorPacking.packSpecifier($0)
+            } ?? NSAppleEventDescriptor.null()
+
             if objects.count == 1, let obj = objects.first {
-                return DescriptorPacking.packObjectReference(obj)
+                return DescriptorPacking.packObjectReference(obj, in: containerDesc)
             }
             let list = NSAppleEventDescriptor.list()
             for (i, obj) in objects.enumerated() {
-                list.insert(DescriptorPacking.packObjectReference(obj), at: i + 1)
+                list.insert(DescriptorPacking.packObjectReference(obj, in: containerDesc), at: i + 1)
             }
             return list
         }
@@ -69,11 +86,24 @@ public final class CoreSuiteHandlers: Sendable {
                 throw AppleEventError.notModifiable("Property \(propertyCode) is read-only")
             }
 
-            guard let value = DescriptorPacking.unpack(data, as: propDesc.type) else {
-                throw AppleEventError.wrongDataType("Cannot convert to \(propDesc.type)")
+            // If the data is an object specifier, resolve it to the actual object
+            if case .objectSpecifier = propDesc.type,
+               data.descriptorType == typeObjectSpecifier {
+                let objSpecifier = try ObjectSpecifierParsing.parse(data)
+                let resolved = try resolver.resolve(objSpecifier)
+                guard let resolvedObj = resolved.first else {
+                    throw AppleEventError.noSuchObject("Could not resolve object for property \(propertyCode)")
+                }
+                try target.setScriptableValue(resolvedObj as any ScriptableValue, forProperty: propertyCode)
+            } else if data.descriptorType == typeNull || data.descriptorType == UInt32(cMissingValue) {
+                // Handle missing value / null — clear the property
+                try target.setScriptableValue("" as any ScriptableValue, forProperty: propertyCode)
+            } else {
+                guard let value = DescriptorPacking.unpack(data, as: propDesc.type) else {
+                    throw AppleEventError.wrongDataType("Cannot convert to \(propDesc.type)")
+                }
+                try pipeline.setProperty(propertyCode, of: target, to: value)
             }
-
-            try pipeline.setProperty(propertyCode, of: target, to: value)
 
         default:
             throw AppleEventError.eventNotHandled("Set requires a property specifier")

@@ -2,11 +2,10 @@ import SwiftUI
 
 struct ContentView: View {
     @Bindable var app: TodoApplication
-    @State private var selectedList: TodoList?
 
     var body: some View {
         NavigationSplitView {
-            List(app.todoLists, selection: $selectedList) { list in
+            List(app.todoLists, selection: $app.selectedList) { list in
                 NavigationLink(value: list) {
                     HStack {
                         Text(list.name)
@@ -15,17 +14,25 @@ struct ContentView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+                .swipeActions(edge: .trailing) {
+                    Button(role: .destructive) {
+                        if app.selectedList === list { app.selectedList = nil }
+                        app.todoLists.removeAll { $0 === list }
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
             }
             .navigationTitle("Lists")
             .toolbar {
                 Button("Add List", systemImage: "plus") {
                     let newList = TodoList(name: "New List")
                     app.todoLists.append(newList)
-                    selectedList = newList
+                    app.selectedList = newList
                 }
             }
         } detail: {
-            if let list = selectedList {
+            if let list = app.selectedList {
                 TodoListDetailView(list: list)
             } else {
                 ContentUnavailableView("Select a List", systemImage: "list.bullet")
@@ -41,9 +48,13 @@ struct TodoListDetailView: View {
         List {
             ForEach(list.items) { item in
                 TodoItemRow(item: item)
-            }
-            .onDelete { indexSet in
-                list.items.remove(atOffsets: indexSet)
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            list.items.removeAll { $0 === item }
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
             }
         }
         .navigationTitle(list.name)
