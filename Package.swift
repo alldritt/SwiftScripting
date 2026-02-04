@@ -69,7 +69,7 @@ let package = Package(
         // MARK: - Example Apps
         .executableTarget(
             name: "ScriptableTodos",
-            dependencies: ["SwiftScripting", "SwiftScriptingAppleEvents"],
+            dependencies: ["SwiftScripting", "SwiftScriptingAppleEvents", "SwiftScriptingIntents"],
             path: "Examples/ScriptableTodos",
             exclude: ["project.yml", "ObjC", "ScriptableTodos.sdef", "Info.plist", "TestScriptableTodos.applescript"],
             swiftSettings: [.swiftLanguageMode(.v6)]

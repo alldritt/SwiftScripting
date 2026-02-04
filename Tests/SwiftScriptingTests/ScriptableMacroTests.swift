@@ -34,52 +34,12 @@ struct ScriptableMacroTests {
                         name: "my doc",
                         code: SwiftScripting.FourCharCode("MyDo"),
                         properties: [
-                            ScriptingPropertyDescription(name: "id", code: .propertyID, type: String.scriptingType, isReadOnly: true),
-                            ScriptingPropertyDescription(name: "name", code: SwiftScripting.FourCharCode("pnam"), type: String.scriptingType, isReadOnly: false)
+                            ScriptingPropertyDescription(name: "id", code: .propertyID, type: String.scriptingType, isReadOnly: true, getter: { $0.scriptableID }, setter: nil),
+                            ScriptingPropertyDescription(name: "name", code: SwiftScripting.FourCharCode("pnam"), type: String.scriptingType, isReadOnly: false, getter: { ($0 as! MyDoc).name }, setter: { ($0 as! MyDoc).name = $1 as! String })
                         ],
                         elements: [
                             \n                ]
                     )
-                }
-
-                public func scriptableValue(forProperty code: SwiftScripting.FourCharCode) -> any ScriptableValue {
-                    switch code {
-                    case SwiftScripting.FourCharCode("pnam"): return self.name as any ScriptableValue
-                    default:
-                        return "" as any ScriptableValue
-                    }
-                }
-
-                public func setScriptableValue(_ value: any ScriptableValue, forProperty code: SwiftScripting.FourCharCode) throws {
-                    switch code {
-                    case SwiftScripting.FourCharCode("pnam"): self.name = value as! String
-                    default:
-                        throw ScriptingError.propertyNotFound(code)
-                    }
-                }
-
-                public func scriptableElements(forCode code: SwiftScripting.FourCharCode) -> [any ScriptableObject] {
-                    switch code {
-                    break
-                    default:
-                        return []
-                    }
-                }
-
-                public func insertScriptableElement(_ object: any ScriptableObject, forCode code: SwiftScripting.FourCharCode, at index: Int) throws {
-                    switch code {
-                    break
-                    default:
-                        throw ScriptingError.elementNotFound(code)
-                    }
-                }
-
-                public func removeScriptableElement(at index: Int, forCode code: SwiftScripting.FourCharCode) throws {
-                    switch code {
-                    break
-                    default:
-                        throw ScriptingError.elementNotFound(code)
-                    }
                 }
 
                 @ObservationIgnored public let _$observationRegistrar = Observation.ObservationRegistrar()
@@ -122,57 +82,13 @@ struct ScriptableMacroTests {
                         name: "todo list",
                         code: SwiftScripting.FourCharCode("tdls"),
                         properties: [
-                            ScriptingPropertyDescription(name: "id", code: .propertyID, type: String.scriptingType, isReadOnly: true),
-                            ScriptingPropertyDescription(name: "name", code: SwiftScripting.FourCharCode("pnam"), type: String.scriptingType, isReadOnly: false)
+                            ScriptingPropertyDescription(name: "id", code: .propertyID, type: String.scriptingType, isReadOnly: true, getter: { $0.scriptableID }, setter: nil),
+                            ScriptingPropertyDescription(name: "name", code: SwiftScripting.FourCharCode("pnam"), type: String.scriptingType, isReadOnly: false, getter: { ($0 as! TodoList).name }, setter: { ($0 as! TodoList).name = $1 as! String })
                         ],
                         elements: [
-                            ScriptingElementDescription(type: TodoItem.self)
+                            ScriptingElementDescription(type: TodoItem.self, getter: { ($0 as! TodoList).items.map { $0 as any ScriptableObject } }, inserter: { guard let typed = $1 as? TodoItem else { throw ScriptingError.typeMismatch(expected: TodoItem.self) }; ($0 as! TodoList).items.insert(typed, at: $2) }, remover: { ($0 as! TodoList).items.remove(at: $1) })
                         ]
                     )
-                }
-
-                public func scriptableValue(forProperty code: SwiftScripting.FourCharCode) -> any ScriptableValue {
-                    switch code {
-                    case SwiftScripting.FourCharCode("pnam"): return self.name as any ScriptableValue
-                    default:
-                        return "" as any ScriptableValue
-                    }
-                }
-
-                public func setScriptableValue(_ value: any ScriptableValue, forProperty code: SwiftScripting.FourCharCode) throws {
-                    switch code {
-                    case SwiftScripting.FourCharCode("pnam"): self.name = value as! String
-                    default:
-                        throw ScriptingError.propertyNotFound(code)
-                    }
-                }
-
-                public func scriptableElements(forCode code: SwiftScripting.FourCharCode) -> [any ScriptableObject] {
-                    switch code {
-                    case TodoItem.scriptingClassDescription.code: return self.items.map { $0 as any ScriptableObject }
-                    default:
-                        return []
-                    }
-                }
-
-                public func insertScriptableElement(_ object: any ScriptableObject, forCode code: SwiftScripting.FourCharCode, at index: Int) throws {
-                    switch code {
-                    case TodoItem.scriptingClassDescription.code:
-                        guard let typed = object as? TodoItem else {
-                            throw ScriptingError.typeMismatch(expected: TodoItem.self)
-                        }
-                        self.items.insert(typed, at: index)
-                    default:
-                        throw ScriptingError.elementNotFound(code)
-                    }
-                }
-
-                public func removeScriptableElement(at index: Int, forCode code: SwiftScripting.FourCharCode) throws {
-                    switch code {
-                    case TodoItem.scriptingClassDescription.code: self.items.remove(at: index)
-                    default:
-                        throw ScriptingError.elementNotFound(code)
-                    }
                 }
 
                 @ObservationIgnored public let _$observationRegistrar = Observation.ObservationRegistrar()
@@ -205,31 +121,11 @@ struct ScriptableMacroTests {
                         name: "MyDoc",
                         code: SwiftScripting.FourCharCode("MyDo"),
                         properties: [
-                            ScriptingPropertyDescription(name: "id", code: .propertyID, type: String.scriptingType, isReadOnly: true)
+                            ScriptingPropertyDescription(name: "id", code: .propertyID, type: String.scriptingType, isReadOnly: true, getter: { $0.scriptableID }, setter: nil)
                         ],
                         elements: [
                             \n                ]
                     )
-                }
-
-                public func scriptableValue(forProperty code: SwiftScripting.FourCharCode) -> any ScriptableValue {
-                    return "" as any ScriptableValue
-                }
-
-                public func setScriptableValue(_ value: any ScriptableValue, forProperty code: SwiftScripting.FourCharCode) throws {
-                    throw ScriptingError.propertyNotFound(code)
-                }
-
-                public func scriptableElements(forCode code: SwiftScripting.FourCharCode) -> [any ScriptableObject] {
-                    return []
-                }
-
-                public func insertScriptableElement(_ object: any ScriptableObject, forCode code: SwiftScripting.FourCharCode, at index: Int) throws {
-                    throw ScriptingError.elementNotFound(code)
-                }
-
-                public func removeScriptableElement(at index: Int, forCode code: SwiftScripting.FourCharCode) throws {
-                    throw ScriptingError.elementNotFound(code)
                 }
 
                 @ObservationIgnored public let _$observationRegistrar = Observation.ObservationRegistrar()
@@ -262,31 +158,11 @@ struct ScriptableMacroTests {
                         name: "TodoItem",
                         code: SwiftScripting.FourCharCode("tdim"),
                         properties: [
-                            ScriptingPropertyDescription(name: "id", code: .propertyID, type: String.scriptingType, isReadOnly: true)
+                            ScriptingPropertyDescription(name: "id", code: .propertyID, type: String.scriptingType, isReadOnly: true, getter: { $0.scriptableID }, setter: nil)
                         ],
                         elements: [
                             \n                ]
                     )
-                }
-
-                public func scriptableValue(forProperty code: SwiftScripting.FourCharCode) -> any ScriptableValue {
-                    return "" as any ScriptableValue
-                }
-
-                public func setScriptableValue(_ value: any ScriptableValue, forProperty code: SwiftScripting.FourCharCode) throws {
-                    throw ScriptingError.propertyNotFound(code)
-                }
-
-                public func scriptableElements(forCode code: SwiftScripting.FourCharCode) -> [any ScriptableObject] {
-                    return []
-                }
-
-                public func insertScriptableElement(_ object: any ScriptableObject, forCode code: SwiftScripting.FourCharCode, at index: Int) throws {
-                    throw ScriptingError.elementNotFound(code)
-                }
-
-                public func removeScriptableElement(at index: Int, forCode code: SwiftScripting.FourCharCode) throws {
-                    throw ScriptingError.elementNotFound(code)
                 }
 
                 @ObservationIgnored public let _$observationRegistrar = Observation.ObservationRegistrar()

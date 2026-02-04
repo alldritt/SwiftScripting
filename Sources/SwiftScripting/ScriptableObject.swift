@@ -45,6 +45,48 @@ extension ScriptableObject {
     public nonisolated static var scriptingType: ScriptingType { .objectSpecifier("") }
 }
 
+// MARK: - Default Closure-Based Dispatch
+
+extension ScriptableObject {
+    public func scriptableValue(forProperty code: FourCharCode) -> any ScriptableValue {
+        if let prop = Self.scriptingClassDescription.property(forCode: code), let getter = prop.getter {
+            return getter(self)
+        }
+        return "" as any ScriptableValue
+    }
+
+    public func setScriptableValue(_ value: any ScriptableValue, forProperty code: FourCharCode) throws {
+        if let prop = Self.scriptingClassDescription.property(forCode: code), let setter = prop.setter {
+            try setter(self, value)
+            return
+        }
+        throw ScriptingError.propertyNotFound(code)
+    }
+
+    public func scriptableElements(forCode code: FourCharCode) -> [any ScriptableObject] {
+        if let elem = Self.scriptingClassDescription.element(forCode: code), let getter = elem.getter {
+            return getter(self)
+        }
+        return []
+    }
+
+    public func insertScriptableElement(_ object: any ScriptableObject, forCode code: FourCharCode, at index: Int) throws {
+        if let elem = Self.scriptingClassDescription.element(forCode: code), let inserter = elem.inserter {
+            try inserter(self, object, index)
+            return
+        }
+        throw ScriptingError.elementNotFound(code)
+    }
+
+    public func removeScriptableElement(at index: Int, forCode code: FourCharCode) throws {
+        if let elem = Self.scriptingClassDescription.element(forCode: code), let remover = elem.remover {
+            try remover(self, index)
+            return
+        }
+        throw ScriptingError.elementNotFound(code)
+    }
+}
+
 // MARK: - Scripting Errors
 
 /// Errors that can occur during scripting operations.

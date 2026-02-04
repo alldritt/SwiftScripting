@@ -35,3 +35,5 @@ targets:
         product: SwiftScripting
       - package: SwiftScripting
         product: SwiftScriptingAppleEvents
+      - package: SwiftScripting
+        product: SwiftScriptingIntents

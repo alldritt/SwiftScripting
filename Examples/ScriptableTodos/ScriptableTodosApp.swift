@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftScripting
+import SwiftScriptingIntents
 #if canImport(SwiftScriptingAppleEvents)
 import SwiftScriptingAppleEvents
 #endif
@@ -48,6 +49,9 @@ struct ScriptableTodosApp: App {
         registry.registerFactory(for: TodoItem.self) {
             TodoItem()
         }
+
+        // Wire up App Intents bridge
+        SharedRegistry.registry = registry
 
         // Install Apple Event handlers (macOS only)
         #if canImport(Carbon)

@@ -42,7 +42,7 @@ public indirect enum ScriptingType: Hashable, Sendable {
 }
 
 /// Describes a property on a scriptable class.
-public struct ScriptingPropertyDescription: Hashable, Sendable {
+public struct ScriptingPropertyDescription: Sendable {
     /// The human-readable AppleScript name (e.g., "body text").
     public let name: String
 
@@ -55,33 +55,111 @@ public struct ScriptingPropertyDescription: Hashable, Sendable {
     /// Whether this property is read-only.
     public let isReadOnly: Bool
 
+    /// Closure that reads the property value from the given object.
+    public let getter: (@MainActor @Sendable (any ScriptableObject) -> any ScriptableValue)?
+
+    /// Closure that writes the property value on the given object.
+    public let setter: (@MainActor @Sendable (any ScriptableObject, any ScriptableValue) throws -> Void)?
+
     public init(name: String, code: FourCharCode, type: ScriptingType, isReadOnly: Bool = false) {
         self.name = name
         self.code = code
         self.type = type
         self.isReadOnly = isReadOnly
+        self.getter = nil
+        self.setter = nil
+    }
+
+    public init(
+        name: String,
+        code: FourCharCode,
+        type: ScriptingType,
+        isReadOnly: Bool = false,
+        getter: (@MainActor @Sendable (any ScriptableObject) -> any ScriptableValue)?,
+        setter: (@MainActor @Sendable (any ScriptableObject, any ScriptableValue) throws -> Void)?
+    ) {
+        self.name = name
+        self.code = code
+        self.type = type
+        self.isReadOnly = isReadOnly
+        self.getter = getter
+        self.setter = setter
+    }
+}
+
+extension ScriptingPropertyDescription: Hashable {
+    public static func == (lhs: ScriptingPropertyDescription, rhs: ScriptingPropertyDescription) -> Bool {
+        lhs.name == rhs.name && lhs.code == rhs.code && lhs.type == rhs.type && lhs.isReadOnly == rhs.isReadOnly
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(name)
+        hasher.combine(code)
+        hasher.combine(type)
+        hasher.combine(isReadOnly)
     }
 }
 
 /// Describes a contained element collection on a scriptable class.
-public struct ScriptingElementDescription: Hashable, Sendable {
+public struct ScriptingElementDescription: Sendable {
     /// The singular AppleScript name (e.g., "paragraph").
     public let name: String
 
     /// The four-char code identifying this element type (e.g., `"cpar"`).
     public let code: FourCharCode
 
+    /// Closure that returns the element array from the given parent object.
+    public let getter: (@MainActor @Sendable (any ScriptableObject) -> [any ScriptableObject])?
+
+    /// Closure that inserts an element into the parent at the given index.
+    public let inserter: (@MainActor @Sendable (any ScriptableObject, any ScriptableObject, Int) throws -> Void)?
+
+    /// Closure that removes an element from the parent at the given index.
+    public let remover: (@MainActor @Sendable (any ScriptableObject, Int) throws -> Void)?
+
     /// Derive name and code from the element type's class description.
     @MainActor public init<T: ScriptableObject>(type: T.Type) {
         let desc = T.scriptingClassDescription
         self.name = desc.name
         self.code = desc.code
+        self.getter = nil
+        self.inserter = nil
+        self.remover = nil
     }
 
     /// Manual initializer for non-macro classes (e.g., custom application roots).
     public init(name: String, code: FourCharCode) {
         self.name = name
         self.code = code
+        self.getter = nil
+        self.inserter = nil
+        self.remover = nil
+    }
+
+    /// Initializer with closures, deriving name and code from the element type.
+    @MainActor public init<T: ScriptableObject>(
+        type: T.Type,
+        getter: (@MainActor @Sendable (any ScriptableObject) -> [any ScriptableObject])?,
+        inserter: (@MainActor @Sendable (any ScriptableObject, any ScriptableObject, Int) throws -> Void)?,
+        remover: (@MainActor @Sendable (any ScriptableObject, Int) throws -> Void)?
+    ) {
+        let desc = T.scriptingClassDescription
+        self.name = desc.name
+        self.code = desc.code
+        self.getter = getter
+        self.inserter = inserter
+        self.remover = remover
+    }
+}
+
+extension ScriptingElementDescription: Hashable {
+    public static func == (lhs: ScriptingElementDescription, rhs: ScriptingElementDescription) -> Bool {
+        lhs.name == rhs.name && lhs.code == rhs.code
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(name)
+        hasher.combine(code)
     }
 }
 

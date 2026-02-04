@@ -69,15 +69,27 @@ public struct ScriptableMacro: MemberMacro, ExtensionMacro {
         // Generate scriptingClassDescription
         // Always include pID as a read-only property (ScriptableObject requires Identifiable)
         var allPropDescriptions = [
-            "ScriptingPropertyDescription(name: \"id\", code: .propertyID, type: String.scriptingType, isReadOnly: true)"
+            "ScriptingPropertyDescription(name: \"id\", code: .propertyID, type: String.scriptingType, isReadOnly: true, getter: { $0.scriptableID }, setter: nil)"
         ]
         allPropDescriptions += propertyEntries.map { entry in
-            "ScriptingPropertyDescription(name: \"\(entry.scriptingName)\", code: \(entry.codeExpr), type: \(entry.typeName).scriptingType, isReadOnly: \(entry.isReadOnly))"
+            let getterClosure = "{ ($0 as! \(className)).\(entry.variableName) }"
+            let setterClosure: String
+            if entry.isReadOnly {
+                setterClosure = "nil"
+            } else {
+                setterClosure = "{ ($0 as! \(className)).\(entry.variableName) = $1 as! \(entry.typeName) }"
+            }
+            return "ScriptingPropertyDescription(name: \"\(entry.scriptingName)\", code: \(entry.codeExpr), type: \(entry.typeName).scriptingType, isReadOnly: \(entry.isReadOnly), getter: \(getterClosure), setter: \(setterClosure))"
         }
         let propDescriptions = allPropDescriptions.joined(separator: ",\n                ")
 
         let elemDescriptions = elementEntries.map { entry in
-            "ScriptingElementDescription(type: \(entry.elementTypeName).self)"
+            let getterClosure = "{ ($0 as! \(className)).\(entry.variableName).map { $0 as any ScriptableObject } }"
+            let inserterClosure = """
+            { guard let typed = $1 as? \(entry.elementTypeName) else { throw ScriptingError.typeMismatch(expected: \(entry.elementTypeName).self) }; ($0 as! \(className)).\(entry.variableName).insert(typed, at: $2) }
+            """
+            let removerClosure = "{ ($0 as! \(className)).\(entry.variableName).remove(at: $1) }"
+            return "ScriptingElementDescription(type: \(entry.elementTypeName).self, getter: \(getterClosure), inserter: \(inserterClosure.trimmingCharacters(in: .whitespacesAndNewlines)), remover: \(removerClosure))"
         }.joined(separator: ",\n                ")
 
         members.append("""
@@ -94,128 +106,6 @@ public struct ScriptableMacro: MemberMacro, ExtensionMacro {
             )
         }
         """)
-
-        // Generate scriptableValue(forProperty:)
-        let getPropertyCases = propertyEntries.map { entry in
-            "case \(entry.codeExpr): return self.\(entry.variableName) as any ScriptableValue"
-        }.joined(separator: "\n            ")
-
-        if propertyEntries.isEmpty {
-            members.append("""
-            public func scriptableValue(forProperty code: \(raw: fcc)) -> any ScriptableValue {
-                return "" as any ScriptableValue
-            }
-            """)
-        } else {
-            members.append("""
-            public func scriptableValue(forProperty code: \(raw: fcc)) -> any ScriptableValue {
-                switch code {
-                \(raw: getPropertyCases)
-                default:
-                    return "" as any ScriptableValue
-                }
-            }
-            """)
-        }
-
-        // Generate setScriptableValue(_:forProperty:)
-        let writableEntries = propertyEntries.filter { !$0.isReadOnly }
-        let setPropertyCases = writableEntries.map { entry in
-            "case \(entry.codeExpr): self.\(entry.variableName) = value as! \(entry.typeName)"
-        }.joined(separator: "\n            ")
-
-        if writableEntries.isEmpty {
-            members.append("""
-            public func setScriptableValue(_ value: any ScriptableValue, forProperty code: \(raw: fcc)) throws {
-                throw ScriptingError.propertyNotFound(code)
-            }
-            """)
-        } else {
-            members.append("""
-            public func setScriptableValue(_ value: any ScriptableValue, forProperty code: \(raw: fcc)) throws {
-                switch code {
-                \(raw: setPropertyCases)
-                default:
-                    throw ScriptingError.propertyNotFound(code)
-                }
-            }
-            """)
-        }
-
-        // Generate scriptableElements(forCode:)
-        let getElementCases = elementEntries.map { entry in
-            "case \(entry.elementTypeName).scriptingClassDescription.code: return self.\(entry.variableName).map { $0 as any ScriptableObject }"
-        }.joined(separator: "\n            ")
-
-        if elementEntries.isEmpty {
-            members.append("""
-            public func scriptableElements(forCode code: \(raw: fcc)) -> [any ScriptableObject] {
-                return []
-            }
-            """)
-        } else {
-            members.append("""
-            public func scriptableElements(forCode code: \(raw: fcc)) -> [any ScriptableObject] {
-                switch code {
-                \(raw: getElementCases)
-                default:
-                    return []
-                }
-            }
-            """)
-        }
-
-        // Generate insertScriptableElement
-        let insertElementCases = elementEntries.map { entry in
-            """
-            case \(entry.elementTypeName).scriptingClassDescription.code:
-                        guard let typed = object as? \(entry.elementTypeName) else {
-                            throw ScriptingError.typeMismatch(expected: \(entry.elementTypeName).self)
-                        }
-                        self.\(entry.variableName).insert(typed, at: index)
-            """
-        }.joined(separator: "\n            ")
-
-        if elementEntries.isEmpty {
-            members.append("""
-            public func insertScriptableElement(_ object: any ScriptableObject, forCode code: \(raw: fcc), at index: Int) throws {
-                throw ScriptingError.elementNotFound(code)
-            }
-            """)
-        } else {
-            members.append("""
-            public func insertScriptableElement(_ object: any ScriptableObject, forCode code: \(raw: fcc), at index: Int) throws {
-                switch code {
-                \(raw: insertElementCases)
-                default:
-                    throw ScriptingError.elementNotFound(code)
-                }
-            }
-            """)
-        }
-
-        // Generate removeScriptableElement
-        let removeElementCases = elementEntries.map { entry in
-            "case \(entry.elementTypeName).scriptingClassDescription.code: self.\(entry.variableName).remove(at: index)"
-        }.joined(separator: "\n            ")
-
-        if elementEntries.isEmpty {
-            members.append("""
-            public func removeScriptableElement(at index: Int, forCode code: \(raw: fcc)) throws {
-                throw ScriptingError.elementNotFound(code)
-            }
-            """)
-        } else {
-            members.append("""
-            public func removeScriptableElement(at index: Int, forCode code: \(raw: fcc)) throws {
-                switch code {
-                \(raw: removeElementCases)
-                default:
-                    throw ScriptingError.elementNotFound(code)
-                }
-            }
-            """)
-        }
 
         // Generate Observation tracking storage (public to satisfy _ScriptableObservable protocol)
         members.append("""
