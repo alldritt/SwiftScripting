@@ -1,20 +1,18 @@
 import SwiftUI
 
 struct DocumentEditorView: View {
-    @Bindable var document: TextDocument
+    @ObservedObject var document: TextDocument
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             TextEditor(text: $document.bodyText)
                 .font(.body)
                 .onChange(of: document.bodyText) {
-                    document.modified = true
                     document.syncParagraphsFromBody()
                 }
 
             Divider()
 
-            // Status bar showing paragraph/word counts
             HStack {
                 Text("\(document.paragraphs.count) paragraphs")
                 Text("\(wordCount) words")
@@ -25,6 +23,7 @@ struct DocumentEditorView: View {
             .padding(.vertical, 4)
         }
         .navigationTitle(document.name)
+        .onAppear { document.applyPendingContent() }
     }
 
     private var wordCount: Int {

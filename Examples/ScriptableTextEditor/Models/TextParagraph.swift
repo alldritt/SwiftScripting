@@ -3,8 +3,8 @@ import SwiftScripting
 
 /// A paragraph in a text document.
 ///
-/// Uses manual `ScriptableObject` conformance (instead of `@Scriptable` macro)
-/// because it has computed word elements derived from its text content.
+/// Uses closure-based dispatch in its scripting class description.
+/// Word elements are computed by splitting the paragraph text on whitespace.
 @MainActor
 final class TextParagraph: ScriptableObject, @unchecked Sendable {
     static let classCode = FCC("cpar")
@@ -14,10 +14,24 @@ final class TextParagraph: ScriptableObject, @unchecked Sendable {
             name: "paragraph",
             code: classCode,
             properties: [
-                ScriptingPropertyDescription(name: "text", code: FCC("ctxt"), type: .text),
+                ScriptingPropertyDescription(
+                    name: "text", code: FCC("ctxt"), type: .text,
+                    getter: { ($0 as! TextParagraph).text },
+                    setter: {
+                        guard let s = $1 as? String else {
+                            throw ScriptingError.typeMismatch(expected: String.self)
+                        }
+                        ($0 as! TextParagraph).text = s
+                    }
+                ),
             ],
             elements: [
-                ScriptingElementDescription(type: TextWord.self),
+                ScriptingElementDescription(
+                    type: TextWord.self,
+                    getter: { ($0 as! TextParagraph).text.split(separator: " ").map { TextWord(text: String($0)) } },
+                    inserter: { _, _, _ in throw ScriptingError.commandFailed("Words are computed from paragraph text and cannot be inserted directly") },
+                    remover: { _, _ in throw ScriptingError.commandFailed("Words are computed from paragraph text and cannot be removed directly") }
+                ),
             ]
         )
     }
@@ -29,43 +43,5 @@ final class TextParagraph: ScriptableObject, @unchecked Sendable {
     init(text: String) {
         self.scriptableID = UUID().uuidString
         self.text = text
-    }
-
-    // MARK: - Property Access
-
-    func scriptableValue(forProperty code: FCC) -> any ScriptableValue {
-        switch code {
-        case FCC("ctxt"): return text
-        default: return "" as any ScriptableValue
-        }
-    }
-
-    func setScriptableValue(_ value: any ScriptableValue, forProperty code: FCC) throws {
-        switch code {
-        case FCC("ctxt"):
-            guard let s = value as? String else { throw ScriptingError.typeMismatch(expected: String.self) }
-            text = s
-        default:
-            throw ScriptingError.propertyNotFound(code)
-        }
-    }
-
-    // MARK: - Element Access (computed words)
-
-    func scriptableElements(forCode code: FCC) -> [any ScriptableObject] {
-        switch code {
-        case TextWord.classCode:
-            return text.split(separator: " ").map { TextWord(text: String($0)) }
-        default:
-            return []
-        }
-    }
-
-    func insertScriptableElement(_ object: any ScriptableObject, forCode code: FCC, at index: Int) throws {
-        throw ScriptingError.commandFailed("Words are computed from paragraph text and cannot be inserted directly")
-    }
-
-    func removeScriptableElement(at index: Int, forCode code: FCC) throws {
-        throw ScriptingError.commandFailed("Words are computed from paragraph text and cannot be removed directly")
     }
 }

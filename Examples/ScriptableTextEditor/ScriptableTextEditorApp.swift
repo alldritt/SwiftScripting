@@ -6,7 +6,7 @@ import SwiftScriptingAppleEvents
 
 @main
 struct ScriptableTextEditorApp: App {
-    @State private var application = ScriptableApplication()
+    @State private var application = TextEditorApplication()
     @State private var registry = ScriptableObjectRegistry()
     @State private var isSetUp = false
     #if canImport(Carbon)
@@ -14,11 +14,24 @@ struct ScriptableTextEditorApp: App {
     #endif
 
     var body: some Scene {
-        WindowGroup {
-            ContentView(app: application)
-                .environment(\.scriptingRegistry, registry)
+        DocumentGroup(newDocument: { TextDocument() }) { config in
+            DocumentEditorView(document: config.document)
+                .onAppear { registerDocument(config.document) }
+                .onDisappear { unregisterDocument(config.document) }
                 .onAppear { setupScripting() }
         }
+    }
+
+    @MainActor
+    private func registerDocument(_ doc: TextDocument) {
+        if !application.documents.contains(where: { $0.scriptableID == doc.scriptableID }) {
+            application.documents.append(doc)
+        }
+    }
+
+    @MainActor
+    private func unregisterDocument(_ doc: TextDocument) {
+        application.documents.removeAll { $0.scriptableID == doc.scriptableID }
     }
 
     @MainActor
@@ -26,9 +39,8 @@ struct ScriptableTextEditorApp: App {
         guard !isSetUp else { return }
         isSetUp = true
 
-        // Set up registry
         registry.setApplication(application)
-        registry.registerClass(ScriptableApplication.self)
+        registry.registerClass(TextEditorApplication.self)
         registry.registerClass(TextDocument.self)
         registry.registerClass(TextParagraph.self)
         registry.registerClass(TextWord.self)
@@ -39,12 +51,6 @@ struct ScriptableTextEditorApp: App {
             TextParagraph(text: "")
         }
 
-        // Populate with sample data
-        let doc1 = TextDocument(name: "Welcome", bodyText: "Hello World!\nThis is a sample document.\nIt has three paragraphs.")
-        doc1.syncParagraphsFromBody()
-        application.documents = [doc1]
-
-        // Install Apple Event handlers (macOS only)
         #if canImport(Carbon)
         let pipeline = MutationPipeline(registry: registry)
         let interface = AppleEventInterface(registry: registry, pipeline: pipeline)
