@@ -66,6 +66,20 @@ let package = Package(
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
 
+        // MARK: - Example Apps
+        .executableTarget(
+            name: "ScriptableTodos",
+            dependencies: ["SwiftScripting", "SwiftScriptingAppleEvents"],
+            path: "Examples/ScriptableTodos",
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+        .executableTarget(
+            name: "ScriptableTextEditor",
+            dependencies: ["SwiftScripting", "SwiftScriptingAppleEvents"],
+            path: "Examples/ScriptableTextEditor",
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+
         // MARK: - Tests
         .testTarget(
             name: "SwiftScriptingTests",

@@ -28,7 +28,7 @@ public enum GetPropertyBridge {
         of entity: ScriptableEntity,
         registry: ScriptableObjectRegistry
     ) throws -> any ScriptableValue {
-        guard let app = registry.application else {
+        guard registry.application != nil else {
             throw ScriptingError.objectNotFound("No application")
         }
 
@@ -58,7 +58,7 @@ public enum SetPropertyBridge {
         to value: any ScriptableValue,
         registry: ScriptableObjectRegistry
     ) throws {
-        guard let app = registry.application else {
+        guard registry.application != nil else {
             throw ScriptingError.objectNotFound("No application")
         }
 

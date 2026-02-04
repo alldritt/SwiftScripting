@@ -12,6 +12,9 @@ import SwiftSyntaxMacros
 /// on stored properties to generate the protocol requirements.
 public struct ScriptableMacro: MemberMacro, ExtensionMacro {
 
+    // Fully-qualified name to avoid ambiguity with Carbon's FourCharCode typedef on macOS
+    private static let fcc = "SwiftScripting.FourCharCode"
+
     // MARK: - MemberMacro
 
     public static func expansion(
@@ -46,9 +49,9 @@ public struct ScriptableMacro: MemberMacro, ExtensionMacro {
 
         var members: [DeclSyntax] = []
 
-        // Generate scriptableID
+        // Generate scriptableID (must be nonisolated to satisfy protocol requirement)
         members.append("""
-        public var scriptableID: String { ObjectIdentifier(self).debugDescription }
+        public nonisolated var scriptableID: String { ObjectIdentifier(self).debugDescription }
         """)
 
         // Generate scriptableName (uses first string property named "name" if available)
@@ -65,18 +68,18 @@ public struct ScriptableMacro: MemberMacro, ExtensionMacro {
 
         // Generate scriptingClassDescription
         let propDescriptions = propertyEntries.map { entry in
-            "ScriptingPropertyDescription(name: \"\(entry.scriptingName)\", code: FourCharCode(\"\(entry.code)\"), type: \(entry.typeName).scriptingType, isReadOnly: \(entry.isReadOnly))"
+            "ScriptingPropertyDescription(name: \"\(entry.scriptingName)\", code: \(fcc)(\"\(entry.code)\"), type: \(entry.typeName).scriptingType, isReadOnly: \(entry.isReadOnly))"
         }.joined(separator: ",\n                ")
 
         let elemDescriptions = elementEntries.map { entry in
-            "ScriptingElementDescription(name: \"\(entry.scriptingName)\", code: FourCharCode(\"\(entry.code)\"), objectType: \"\(entry.elementTypeName)\")"
+            "ScriptingElementDescription(name: \"\(entry.scriptingName)\", code: \(fcc)(\"\(entry.code)\"), objectType: \"\(entry.elementTypeName)\")"
         }.joined(separator: ",\n                ")
 
         members.append("""
         public static var scriptingClassDescription: ScriptingClassDescription {
             ScriptingClassDescription(
                 name: "\(raw: className)",
-                code: FourCharCode("\(raw: classCode)"),
+                code: \(raw: fcc)("\(raw: classCode)"),
                 properties: [
                     \(raw: propDescriptions)
                 ],
@@ -88,100 +91,126 @@ public struct ScriptableMacro: MemberMacro, ExtensionMacro {
         """)
 
         // Generate scriptableValue(forProperty:)
-        var getPropertyCases = propertyEntries.map { entry in
-            "case FourCharCode(\"\(entry.code)\"): return self.\(entry.variableName) as any ScriptableValue"
+        let getPropertyCases = propertyEntries.map { entry in
+            "case \(fcc)(\"\(entry.code)\"): return self.\(entry.variableName) as any ScriptableValue"
         }.joined(separator: "\n            ")
-        if getPropertyCases.isEmpty {
-            getPropertyCases = "break"
-        }
 
-        members.append("""
-        public func scriptableValue(forProperty code: FourCharCode) -> any ScriptableValue {
-            switch code {
-            \(raw: getPropertyCases)
-            default:
+        if propertyEntries.isEmpty {
+            members.append("""
+            public func scriptableValue(forProperty code: \(raw: fcc)) -> any ScriptableValue {
                 return "" as any ScriptableValue
             }
+            """)
+        } else {
+            members.append("""
+            public func scriptableValue(forProperty code: \(raw: fcc)) -> any ScriptableValue {
+                switch code {
+                \(raw: getPropertyCases)
+                default:
+                    return "" as any ScriptableValue
+                }
+            }
+            """)
         }
-        """)
 
         // Generate setScriptableValue(_:forProperty:)
-        var setPropertyCases = propertyEntries.filter { !$0.isReadOnly }.map { entry in
-            "case FourCharCode(\"\(entry.code)\"): self.\(entry.variableName) = value as! \(entry.typeName)"
+        let writableEntries = propertyEntries.filter { !$0.isReadOnly }
+        let setPropertyCases = writableEntries.map { entry in
+            "case \(fcc)(\"\(entry.code)\"): self.\(entry.variableName) = value as! \(entry.typeName)"
         }.joined(separator: "\n            ")
-        if setPropertyCases.isEmpty {
-            setPropertyCases = "break"
-        }
 
-        members.append("""
-        public func setScriptableValue(_ value: any ScriptableValue, forProperty code: FourCharCode) throws {
-            switch code {
-            \(raw: setPropertyCases)
-            default:
+        if writableEntries.isEmpty {
+            members.append("""
+            public func setScriptableValue(_ value: any ScriptableValue, forProperty code: \(raw: fcc)) throws {
                 throw ScriptingError.propertyNotFound(code)
             }
+            """)
+        } else {
+            members.append("""
+            public func setScriptableValue(_ value: any ScriptableValue, forProperty code: \(raw: fcc)) throws {
+                switch code {
+                \(raw: setPropertyCases)
+                default:
+                    throw ScriptingError.propertyNotFound(code)
+                }
+            }
+            """)
         }
-        """)
 
         // Generate scriptableElements(forCode:)
-        var getElementCases = elementEntries.map { entry in
-            "case FourCharCode(\"\(entry.code)\"): return self.\(entry.variableName).map { $0 as any ScriptableObject }"
+        let getElementCases = elementEntries.map { entry in
+            "case \(fcc)(\"\(entry.code)\"): return self.\(entry.variableName).map { $0 as any ScriptableObject }"
         }.joined(separator: "\n            ")
-        if getElementCases.isEmpty {
-            getElementCases = "break"
-        }
 
-        members.append("""
-        public func scriptableElements(forCode code: FourCharCode) -> [any ScriptableObject] {
-            switch code {
-            \(raw: getElementCases)
-            default:
+        if elementEntries.isEmpty {
+            members.append("""
+            public func scriptableElements(forCode code: \(raw: fcc)) -> [any ScriptableObject] {
                 return []
             }
+            """)
+        } else {
+            members.append("""
+            public func scriptableElements(forCode code: \(raw: fcc)) -> [any ScriptableObject] {
+                switch code {
+                \(raw: getElementCases)
+                default:
+                    return []
+                }
+            }
+            """)
         }
-        """)
 
         // Generate insertScriptableElement
-        var insertElementCases = elementEntries.map { entry in
+        let insertElementCases = elementEntries.map { entry in
             """
-            case FourCharCode("\(entry.code)"):
+            case \(fcc)("\(entry.code)"):
                         guard let typed = object as? \(entry.elementTypeName) else {
                             throw ScriptingError.typeMismatch(expected: "\(entry.elementTypeName)")
                         }
                         self.\(entry.variableName).insert(typed, at: index)
             """
         }.joined(separator: "\n            ")
-        if insertElementCases.isEmpty {
-            insertElementCases = "break"
-        }
 
-        members.append("""
-        public func insertScriptableElement(_ object: any ScriptableObject, forCode code: FourCharCode, at index: Int) throws {
-            switch code {
-            \(raw: insertElementCases)
-            default:
+        if elementEntries.isEmpty {
+            members.append("""
+            public func insertScriptableElement(_ object: any ScriptableObject, forCode code: \(raw: fcc), at index: Int) throws {
                 throw ScriptingError.elementNotFound(code)
             }
+            """)
+        } else {
+            members.append("""
+            public func insertScriptableElement(_ object: any ScriptableObject, forCode code: \(raw: fcc), at index: Int) throws {
+                switch code {
+                \(raw: insertElementCases)
+                default:
+                    throw ScriptingError.elementNotFound(code)
+                }
+            }
+            """)
         }
-        """)
 
         // Generate removeScriptableElement
-        var removeElementCases = elementEntries.map { entry in
-            "case FourCharCode(\"\(entry.code)\"): self.\(entry.variableName).remove(at: index)"
+        let removeElementCases = elementEntries.map { entry in
+            "case \(fcc)(\"\(entry.code)\"): self.\(entry.variableName).remove(at: index)"
         }.joined(separator: "\n            ")
-        if removeElementCases.isEmpty {
-            removeElementCases = "break"
-        }
 
-        members.append("""
-        public func removeScriptableElement(at index: Int, forCode code: FourCharCode) throws {
-            switch code {
-            \(raw: removeElementCases)
-            default:
+        if elementEntries.isEmpty {
+            members.append("""
+            public func removeScriptableElement(at index: Int, forCode code: \(raw: fcc)) throws {
                 throw ScriptingError.elementNotFound(code)
             }
+            """)
+        } else {
+            members.append("""
+            public func removeScriptableElement(at index: Int, forCode code: \(raw: fcc)) throws {
+                switch code {
+                \(raw: removeElementCases)
+                default:
+                    throw ScriptingError.elementNotFound(code)
+                }
+            }
+            """)
         }
-        """)
 
         // Generate Observation tracking storage
         members.append("""

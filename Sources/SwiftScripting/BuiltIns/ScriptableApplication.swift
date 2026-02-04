@@ -1,10 +1,12 @@
 import Foundation
+import Observation
 
 /// Built-in scriptable application object.
 ///
 /// Represents the running application in the scripting object model.
 /// Automatically populated with name, version, and serves as the root
 /// container for documents and windows.
+@Observable
 @MainActor
 public final class ScriptableApplication: ScriptableObject, @unchecked Sendable {
     public static var scriptingClassDescription: ScriptingClassDescription {
