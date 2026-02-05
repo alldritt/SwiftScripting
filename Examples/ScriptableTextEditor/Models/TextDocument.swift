@@ -65,6 +65,33 @@ final class TextDocument: ScriptableObject, ReferenceFileDocument, ObservableObj
                     inserter: { _, _, _ in throw ScriptingError.commandFailed("Words are computed and cannot be inserted directly") },
                     remover: { _, _ in throw ScriptingError.commandFailed("Words are computed and cannot be removed directly") }
                 ),
+                ScriptingElementDescription(
+                    type: TextCharacter.self,
+                    getter: { doc in
+                        Array((doc as! TextDocument).bodyText).map { TextCharacter(text: String($0)) }
+                    },
+                    inserter: { _, _, _ in throw ScriptingError.commandFailed("Characters are computed and cannot be inserted directly") },
+                    remover: { _, _ in throw ScriptingError.commandFailed("Characters are computed and cannot be removed directly") }
+                ),
+                ScriptingElementDescription(
+                    type: TextInsertionPoint.self,
+                    getter: { obj in
+                        let doc = obj as! TextDocument
+                        let text = doc.bodyText
+                        return (0...text.count).map { offset in
+                            TextInsertionPoint(offset: offset) { [weak doc] (inserted: String) in
+                                guard let doc else { return }
+                                let current = doc.bodyText
+                                guard offset <= current.count else { return }
+                                let idx = current.index(current.startIndex, offsetBy: offset)
+                                doc.bodyText.insert(contentsOf: inserted, at: idx)
+                                doc.syncParagraphsFromBody()
+                            }
+                        }
+                    },
+                    inserter: { _, _, _ in throw ScriptingError.commandFailed("Insertion points cannot be inserted") },
+                    remover: { _, _ in throw ScriptingError.commandFailed("Insertion points cannot be removed") }
+                ),
             ]
         )
     }

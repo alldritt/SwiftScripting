@@ -32,6 +32,12 @@ final class TextParagraph: ScriptableObject, @unchecked Sendable {
                     inserter: { _, _, _ in throw ScriptingError.commandFailed("Words are computed from paragraph text and cannot be inserted directly") },
                     remover: { _, _ in throw ScriptingError.commandFailed("Words are computed from paragraph text and cannot be removed directly") }
                 ),
+                ScriptingElementDescription(
+                    type: TextCharacter.self,
+                    getter: { Array(($0 as! TextParagraph).text).map { TextCharacter(text: String($0)) } },
+                    inserter: { _, _, _ in throw ScriptingError.commandFailed("Characters are computed from paragraph text and cannot be inserted directly") },
+                    remover: { _, _ in throw ScriptingError.commandFailed("Characters are computed from paragraph text and cannot be removed directly") }
+                ),
             ]
         )
     }

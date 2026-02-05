@@ -22,6 +22,14 @@ final class TextWord: ScriptableObject, @unchecked Sendable {
                     getter: { ($0 as! TextWord).text },
                     setter: nil
                 ),
+            ],
+            elements: [
+                ScriptingElementDescription(
+                    type: TextCharacter.self,
+                    getter: { Array(($0 as! TextWord).text).map { TextCharacter(text: String($0)) } },
+                    inserter: { _, _, _ in throw ScriptingError.commandFailed("Characters are computed from word text and cannot be inserted directly") },
+                    remover: { _, _ in throw ScriptingError.commandFailed("Characters are computed from word text and cannot be removed directly") }
+                ),
             ]
         )
     }
