@@ -30,6 +30,10 @@ public enum DescriptorPacking {
             return packURL(url)
         case is ScriptingMissingValue:
             return NSAppleEventDescriptor(typeCode: UInt32(cMissingValue))
+        case let enumVal as ScriptingEnumValue:
+            return NSAppleEventDescriptor(enumCode: enumVal.code.rawValue)
+        case let objRef as ScriptingObjectReference:
+            return packObjectReferenceWithContainer(objRef)
         default:
             // Check for ScriptableObject — return as object specifier reference
             if let obj = value as? any ScriptableObject {
@@ -55,6 +59,26 @@ public enum DescriptorPacking {
             return buildNameSpecifier(classCode: classDesc.code, name: name, container: container)
         }
         return buildIDSpecifier(classCode: classDesc.code, id: object.scriptableID, container: container)
+    }
+
+    /// Recursively packs a ScriptingObjectReference, building the full container chain.
+    private static func packObjectReferenceWithContainer(
+        _ objRef: ScriptingObjectReference
+    ) -> NSAppleEventDescriptor {
+        let containerDesc: NSAppleEventDescriptor
+        if let container = objRef.container {
+            // Recursively pack the container if it's also a ScriptingObjectReference
+            if let containerRef = container as? ScriptingObjectReference {
+                containerDesc = packObjectReferenceWithContainer(containerRef)
+            } else if let containerObj = container as? any ScriptableObject {
+                containerDesc = packObjectReference(containerObj)
+            } else {
+                containerDesc = NSAppleEventDescriptor.null()
+            }
+        } else {
+            containerDesc = NSAppleEventDescriptor.null()
+        }
+        return packObjectReference(objRef.object, in: containerDesc)
     }
 
     // MARK: - Unpack AEDescriptor → Swift
