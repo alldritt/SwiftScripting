@@ -100,11 +100,17 @@ final class TextDocument: ScriptableObject, ReferenceFileDocument, ObservableObj
     var scriptableName: String? { name }
 
     @Published var name: String = "Untitled"
-    @Published var bodyText: String = ""
+    @Published var bodyText: String = "" {
+        didSet { _snapshotData = bodyText.data(using: .utf8) ?? Data() }
+    }
     @Published var paragraphs: [TextParagraph] = []
 
     /// The associated window, set by the app when the document is registered.
     weak var window: TextEditorWindow?
+
+    /// Cached snapshot data, updated on every `bodyText` change so that the
+    /// nonisolated `snapshot(contentType:)` can read it without main-actor access.
+    nonisolated(unsafe) private var _snapshotData = Data()
 
     /// Pending file content set from `nonisolated init(configuration:)`.
     /// Applied on first access from the main actor.
@@ -148,9 +154,7 @@ final class TextDocument: ScriptableObject, ReferenceFileDocument, ObservableObj
     typealias Snapshot = Data
 
     nonisolated func snapshot(contentType: UTType) throws -> Data {
-        MainActor.assumeIsolated {
-            bodyText.data(using: .utf8) ?? Data()
-        }
+        _snapshotData
     }
 
     nonisolated func fileWrapper(snapshot: Data, configuration: WriteConfiguration) throws -> FileWrapper {
