@@ -22,6 +22,12 @@ public struct ObjectResolver: Sendable {
             return [app]
 
         case .index(let classCode, let index, let container):
+            // Check if container is a property returning a list of object references
+            let elements = try resolveElementsFromContainer(classCode: classCode, container: container)
+            if !elements.isEmpty || isPropertyContainer(container) {
+                return try resolveByIndexInElements(index: index, elements: elements)
+            }
+            // Fall back to normal container-based resolution
             let containers = try resolveContainer(container)
             return try containers.flatMap { container in
                 try resolveByIndex(classCode: classCode, index: index, in: container)
@@ -40,12 +46,24 @@ public struct ObjectResolver: Sendable {
             }
 
         case .every(let classCode, let container):
+            // Check if container is a property returning a list of object references
+            let elements = try resolveElementsFromContainer(classCode: classCode, container: container)
+            if !elements.isEmpty || isPropertyContainer(container) {
+                return elements
+            }
+            // Fall back to normal container-based resolution
             let containers = try resolveContainer(container)
             return containers.flatMap { container in
                 resolveEvery(classCode: classCode, in: container)
             }
 
         case .range(let classCode, let from, let to, let container):
+            // Check if container is a property returning a list of object references
+            let elements = try resolveElementsFromContainer(classCode: classCode, container: container)
+            if !elements.isEmpty || isPropertyContainer(container) {
+                return try resolveRangeInElements(from: from, to: to, elements: elements)
+            }
+            // Fall back to normal container-based resolution
             let containers = try resolveContainer(container)
             return try containers.flatMap { container in
                 try resolveRange(classCode: classCode, from: from, to: to, in: container)
@@ -94,11 +112,103 @@ public struct ObjectResolver: Sendable {
         return try resolve(container)
     }
 
+    /// Resolves elements from a container that may be a property returning a list of object references.
+    ///
+    /// When the container is a `.property` specifier whose value is a list of `ScriptingObjectReference`,
+    /// this returns those objects directly (allowing `item 1 of output nodes of document "xxx"`).
+    /// Otherwise, it falls back to normal element resolution via `scriptableElements(forCode:)`.
+    private func resolveElementsFromContainer(
+        classCode: FourCharCode,
+        container: ObjectSpecifier?
+    ) throws -> [any ScriptableObject] {
+        // Check if the container is a property that returns a list of object references
+        if case .property(let propertyCode, let propertyContainer) = container {
+            let propertyContainers = try resolveContainer(propertyContainer)
+            guard let first = propertyContainers.first else {
+                throw ScriptingError.objectNotFound("No container for property \(propertyCode)")
+            }
+            let value = first.scriptableValue(forProperty: propertyCode)
+
+            // If the property value is a list of object references, extract the objects
+            if let refs = value as? [ScriptingObjectReference] {
+                return refs.map { $0.object }
+            }
+
+            // If the value is a list of ScriptableObjects directly
+            if let objects = value as? [any ScriptableObject] {
+                return objects
+            }
+        }
+
+        // Fall back to normal container resolution and element access
+        let containers = try resolveContainer(container)
+        return containers.flatMap { container in
+            container.scriptableElements(forCode: classCode)
+        }
+    }
+
     // MARK: - Helpers
 
     /// Returns the SDEF element name for a class code (e.g. "todo item"), falling back to the four-char code.
     private func elementName(for code: FourCharCode) -> String {
         registry.classDescription(for: code)?.name ?? code.stringValue
+    }
+
+    /// Checks if the container specifier is a property reference.
+    private func isPropertyContainer(_ container: ObjectSpecifier?) -> Bool {
+        if case .property = container {
+            return true
+        }
+        return false
+    }
+
+    /// Resolves an index within a pre-fetched array of elements.
+    private func resolveByIndexInElements(
+        index: Int,
+        elements: [any ScriptableObject]
+    ) throws -> [any ScriptableObject] {
+        guard !elements.isEmpty else {
+            throw ScriptingError.indexOutOfBounds(index: index, count: 0)
+        }
+
+        // AppleScript uses 1-based indexing; negative means from end
+        // Special cases: 0 = middle, Int.max = random ("some item")
+        let resolvedIndex: Int
+        if index == Int.max {
+            // "some item" - random selection
+            resolvedIndex = Int.random(in: 0..<elements.count)
+        } else if index == 0 {
+            // "middle item"
+            resolvedIndex = elements.count / 2
+        } else if index > 0 {
+            resolvedIndex = index - 1
+        } else {
+            resolvedIndex = elements.count + index
+        }
+
+        guard resolvedIndex >= 0, resolvedIndex < elements.count else {
+            throw ScriptingError.indexOutOfBounds(index: index, count: elements.count)
+        }
+        return [elements[resolvedIndex]]
+    }
+
+    /// Resolves a range within a pre-fetched array of elements.
+    private func resolveRangeInElements(
+        from: RangeBound,
+        to: RangeBound,
+        elements: [any ScriptableObject]
+    ) throws -> [any ScriptableObject] {
+        let fromIndex = try resolveBound(from, in: elements)
+        let toIndex = try resolveBound(to, in: elements)
+
+        let lower = min(fromIndex, toIndex)
+        let upper = max(fromIndex, toIndex)
+
+        guard lower >= 0, upper < elements.count else {
+            throw ScriptingError.indexOutOfBounds(index: upper + 1, count: elements.count)
+        }
+
+        return Array(elements[lower...upper])
     }
 
     // MARK: - Index Resolution
@@ -109,14 +219,23 @@ public struct ObjectResolver: Sendable {
         in container: any ScriptableObject
     ) throws -> [any ScriptableObject] {
         let elements = container.scriptableElements(forCode: classCode)
+        guard !elements.isEmpty else {
+            throw ScriptingError.indexOutOfBounds(index: index, count: 0)
+        }
+
         // AppleScript uses 1-based indexing; negative means from end
+        // Special cases: 0 = middle, Int.max = random ("some item")
         let resolvedIndex: Int
-        if index > 0 {
+        if index == Int.max {
+            // "some item" - random selection
+            resolvedIndex = Int.random(in: 0..<elements.count)
+        } else if index == 0 {
+            // "middle item"
+            resolvedIndex = elements.count / 2
+        } else if index > 0 {
             resolvedIndex = index - 1
-        } else if index < 0 {
-            resolvedIndex = elements.count + index
         } else {
-            throw ScriptingError.invalidSpecifier("Index 0 is not valid (AppleScript uses 1-based indexing)")
+            resolvedIndex = elements.count + index
         }
 
         guard resolvedIndex >= 0, resolvedIndex < elements.count else {

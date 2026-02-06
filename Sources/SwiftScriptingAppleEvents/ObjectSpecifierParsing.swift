@@ -73,6 +73,9 @@ public enum ObjectSpecifierParsing {
                 return .index(classCode: classCode, index: -1, container: container)
             case OSType(kAEMiddle):
                 return .index(classCode: classCode, index: 0, container: container)
+            case OSType(kAEAny):
+                // "some item" - random selection, use Int.max as sentinel
+                return .index(classCode: classCode, index: Int.max, container: container)
             default:
                 break
             }
